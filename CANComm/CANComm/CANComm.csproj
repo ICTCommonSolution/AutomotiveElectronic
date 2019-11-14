@@ -7,8 +7,8 @@
     <ProjectGuid>{A60105AF-CB66-4F7F-9B95-13009756C038}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>CANBase</RootNamespace>
-    <AssemblyName>CANBase</AssemblyName>
+    <RootNamespace>CAN</RootNamespace>
+    <AssemblyName>CANComm</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
@@ -61,5 +61,8 @@
 Copy "$(SolutionDir)Bin\$(ConfigurationName)\*.dll" "$(SolutionDir)Debug\"
 Copy "$(ProjectDir)*.json" "$(SolutionDir)Debug\"
 Copy "$(ProjectDir)*.json" "$(SolutionDir)Bin\$(ConfigurationName)\"</PostBuildEvent>
+  </PropertyGroup>
+  <PropertyGroup>
+    <PreBuildEvent>if NOT Exist "$(SolutionDir)Debug\" mkdir "$(SolutionDir)Debug\"</PreBuildEvent>
   </PropertyGroup>
 </Project>

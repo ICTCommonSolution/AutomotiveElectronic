@@ -60,4 +60,7 @@
     <PostBuildEvent>Copy "$(SolutionDir)Bin\$(ConfigurationName)\*.exe" "$(SolutionDir)Debug\"
 Copy "$(SolutionDir)Bin\$(ConfigurationName)\*.dll" "$(SolutionDir)Debug\"</PostBuildEvent>
   </PropertyGroup>
+  <PropertyGroup>
+    <PreBuildEvent>if NOT Exist "$(SolutionDir)Debug\" mkdir "$(SolutionDir)Debug\"</PreBuildEvent>
+  </PropertyGroup>
 </Project>
