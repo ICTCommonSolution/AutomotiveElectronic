@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Threading;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -99,30 +100,34 @@ namespace CAN
 		
 		public bool ReceiveBytes(out List<CAN_OBJ> DataList)
 		{
-			DataList = ReadMessages();
-			return true;
+            DataList = new List<CAN_OBJ>();
+			CAN_OBJ objFrame = new CAN_OBJ();
+
+            do
+            {
+                objFrame = ReadFrame();
+                if (objFrame.data != null)
+                {
+                    DataList.Add(objFrame);
+                }
+                Thread.Sleep(20);
+            } while (false == BufferEmpty()); //unread frame in instrument
+
+            return true;
 		}
 
-        private List<CAN_OBJ> ReadMessages()
+        private CAN_OBJ ReadFrame()
         {
-        	List<CAN_OBJ> listResp = new List<CAN_OBJ>();
-            CAN_OBJ mMsg = new CAN_OBJ();
+            CAN_OBJ frame = new CAN_OBJ();
 
-             do
-            {
-                uint mLen = 1;
-                if (!((ECANDLL.Receive(1, 0, 0, out mMsg, mLen, 1) == ECANStatus.STATUS_OK) & (mLen > 0)))
-                {
-                    break;
-                }
-				else
-				{
-					listResp.Add(mMsg);
-				}
+            uint uiLen = 1;
+			if(ECANDLL.Receive(Setting.DeviceType, Setting.DeviceID, Setting.Channel, out frame, uiLen, 1) != ECANStatus.STATUS_OK)
+			{
+			//TODO:
+				//get error
 			}
-            while (false == BufferEmpty());
 
-            return listResp;
+            return frame;
         }
 		#endregion
 

@@ -77,14 +77,11 @@ namespace CAN
 				Console.WriteLine(string.Format("Received total {0} can objects:", listRes.Count));
 				foreach(CAN_OBJ obj in listRes)
 				{
-					string line = string.Format("Data: {0}{1}{2}{3}{4}{5}{6}{7}", obj.data[0].ToString("X2"),
-                                                                                    obj.data[1].ToString("X2"),
-                                                                                    obj.data[2].ToString("X2"),
-                                                                                    obj.data[3].ToString("X2"),
-                                                                                    obj.data[4].ToString("X2"),
-                                                                                    obj.data[5].ToString("X2"),
-                                                                                    obj.data[6].ToString("X2"),
-                                                                                    obj.data[7].ToString("X2"));
+					string line = string.Empty;
+					for(int i = 0; i < obj.DataLen; i++)
+					{
+                        line += obj.data[i].ToString("X2");
+					}
 					Console.WriteLine(line);
 				}
 			}
