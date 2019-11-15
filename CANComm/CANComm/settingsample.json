@@ -1,13 +1,13 @@
 {
-  "CAN": 
+  "CAN":
   {
-    "DeviceTypeStr": 1,
+    "DeviceType": 1,
     "DeviceID": 0,
     "Channel": 0,
     "AccCode": 0,
     "AccMask": 16777215,
     "Filter": 0,
     "Mode": 0,
-    "BaudRate": 7
+    "BaudRate": "500"
   }
 }

@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json.Bson;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Text.RegularExpressions;
 
 namespace CAN
 {
@@ -28,23 +29,23 @@ namespace CAN
 					ECANDLL.CloseDevice(Setting.DeviceType, devID);
 					Connected = false;
 				}
-            	Setting.CanId = devID;
+            	Setting.DeviceID = devID;
 
 				//open device
-				if(ECANDLL.OpenDevice(Setting.DeviceType, Setting.CanId, 0) != CAN.ECANStatus.STATUS_OK)
+				if(ECANDLL.OpenDevice(Setting.DeviceType, Setting.DeviceID, 0) != CAN.ECANStatus.STATUS_OK)
 				{
 					messageOfFalse = string.Format("Failed at open device.");
 					return false;
 				}
 				//Init can channel with config
 				Setting.Channel = channel;
-				if(ECANDLL.InitCAN(Setting.DeviceType, Setting.CanId, Setting.Channel, ref Setting.InitCfg) != CAN.ECANStatus.STATUS_OK)
+				if(ECANDLL.InitCAN(Setting.DeviceType, Setting.DeviceID, Setting.Channel, ref Setting.InitCfg) != CAN.ECANStatus.STATUS_OK)
 				{
 					messageOfFalse = string.Format("Failed at initialize device.");
 					return false;
 				}
 				//start can channel
-				if(ECANDLL.StartCAN(Setting.DeviceType, Setting.CanId, Setting.Channel) != CAN.ECANStatus.STATUS_OK)
+				if(ECANDLL.StartCAN(Setting.DeviceType, Setting.DeviceID, Setting.Channel) != CAN.ECANStatus.STATUS_OK)
 				{
 					messageOfFalse = string.Format("Failed at initialize device.");
 					return false;
@@ -64,13 +65,13 @@ namespace CAN
         {
 			try
 			{
-				ECANDLL.CloseDevice(Setting.DeviceType, Setting.CanId);
+				ECANDLL.CloseDevice(Setting.DeviceType, Setting.DeviceID);
 				Connected = false;
 			}
 			catch(Exception ex)
 			{
 				Connected = false;
-				throw new Exception(string.Format("Failed at close can device @ID:{0}. {1}", Setting.CanId, ex.Message));
+				throw new Exception(string.Format("Failed at close can device @ID:{0}. {1}", Setting.DeviceID, ex.Message));
 			}
 			return true;
 		}
@@ -80,14 +81,14 @@ namespace CAN
 		{
 			try
 			{
-				ulong ulUnread = (ulong)ECANDLL.GetReceiveNum(Setting.DeviceType, Setting.CanId, Setting.Channel);
+				ulong ulUnread = (ulong)ECANDLL.GetReceiveNum(Setting.DeviceType, Setting.DeviceID, Setting.Channel);
 				if(ulUnread>0)
 				{
-					return false;
+					return false;//Not empty. unreceived frame exist(s)
 				}
 				else
 				{
-					return true;
+					return true;//empty
 				}
 			}
 			catch(Exception ex)
@@ -127,7 +128,7 @@ namespace CAN
 
         #region Send Message
         //Send data to BUS
-        public bool SendBytes(List<byte[]> DataList,
+        public bool SendMessages(List<byte[]> DataList,
                             uint ID = 1,
         					uint TimeStamp = 0,
         					byte TimeFlag = 0x0,
@@ -172,7 +173,7 @@ namespace CAN
 						}
 					}
                     canOBJ.DataLen = (byte)uLength;
-                    bSendStatus = SendByte(canOBJ, byteData);
+                    bSendStatus = SendFrame(canOBJ, byteData);
                     if (bSendStatus == false)
                     {
                         return false;
@@ -194,7 +195,7 @@ namespace CAN
         }
 
         //Send 8-byte to CAN BUS
-        private bool SendByte(CAN_OBJ canOBJ, byte[] message)
+        private bool SendFrame(CAN_OBJ canOBJ, byte[] message)
         {
         	CAN_OBJ[] objMessage = new CAN_OBJ[2];
             UInt16 uLen = 0;
@@ -207,7 +208,7 @@ namespace CAN
 
                 uLen = 1;
                 iSizeOfObj = System.Runtime.InteropServices.Marshal.SizeOf(objMessage[0]);
-                if (ECANDLL.Transmit(Setting.DeviceType, Setting.CanId, Setting.Channel, objMessage, (ushort)uLen) != ECANStatus.STATUS_OK)
+                if (ECANDLL.Transmit(Setting.DeviceType, Setting.DeviceID, Setting.Channel, objMessage, (ushort)uLen) != ECANStatus.STATUS_OK)
                 {
                     //TODO:get last error message
                     throw new Exception(string.Format("failed at can transmit with data: {0}", message.ToString()));
@@ -255,7 +256,7 @@ namespace CAN
     public class CANSetting
     {
     //below settings for open device
-    	public UInt16 CanId { get; set; }
+    	public UInt16 DeviceID { get; set; }
         public UInt16 AccCode { get; set; }
 		public UInt32 AccMask { get; set; }
 		public byte Filter { get; set; }
@@ -280,6 +281,7 @@ namespace CAN
 		{
             StreamReader file;
             JsonTextReader reader;
+			string strBaudRate = string.Empty;
 
             try
 			{
@@ -288,11 +290,11 @@ namespace CAN
 				reader = new JsonTextReader(file);
 				JObject joSetting = (JObject)JToken.ReadFrom(reader);
 
-			//UInt16 CAN_ID
+			//UInt16 DeviceID in measure system
                 JObject joCAN = (JObject)joSetting["CAN"];
 				if(true == joCAN.ContainsKey("DeviceID"))
 				{
-					CanId = (UInt16)joCAN["DeviceID"];
+					DeviceID = (UInt16)joCAN["DeviceID"];
 				}
 				else
 				{
@@ -325,24 +327,6 @@ namespace CAN
 				{
 					throw new Exception(string.Format("Filter is missing"));
 				}
-/*			//byte Timing0
-				if(true == joCAN.ContainsKey("Timing0"))
-				{
-					Timing0 = (byte)joCAN["Timing0"];
-				}
-				else
-				{
-					throw new Exception(string.Format("Timing0 is missing"));
-				}
-			//byte Timing1
-				if(true == joCAN.ContainsKey("Timing1"))
-				{
-					Timing1 =(byte)joCAN["Timing1"];
-				}
-				else
-				{
-					throw new Exception(string.Format("Timing1 is missing"));
-				}*/
 			//UInt16 Mode
 				if(true == joCAN.ContainsKey("Mode"))
 				{
@@ -353,10 +337,10 @@ namespace CAN
 					throw new Exception(string.Format("Mode is missing"));
 				}
 			//int DeviceType
-			   if(true == joCAN.ContainsKey("DeviceTypeStr"))
+			   if(true == joCAN.ContainsKey("DeviceType"))
 			   {
-                    DeviceType = (UInt16)joCAN["DeviceTypeStr"];
-                    /*string strDeviceType = (string)joCAN["DeviceTypeStr"];
+                    DeviceType = (UInt16)joCAN["DeviceType"];
+                    /*string strDeviceType = (string)joCAN["DeviceType"];
 					if(true == strDeviceType.ToUpper().Equals("USBCAN I"))
 					{
 						DeviceType = 3;
@@ -372,7 +356,7 @@ namespace CAN
                 }
                 else
                 {
-                    throw new Exception(string.Format("DeviceTypeStr is missing"));
+                    throw new Exception(string.Format("DeviceType is missing"));
                 }
 			//UInt16 Channel
                 if(true == joCAN.ContainsKey("Channel"))
@@ -386,55 +370,66 @@ namespace CAN
                 //UInt16 BaudRate
                 if (true == joCAN.ContainsKey("BaudRate"))
                 {
-                    BaudRate = (int)joCAN["BaudRate"];
-                    switch ((CANBaudRate)BaudRate)
+                    strBaudRate = (string)joCAN["BaudRate"];
+					string pattern = @"\d+";
+					Regex reg = new Regex(pattern);
+					bool match = reg.IsMatch(strBaudRate);
+					int BaudRate = -1;
+					if (true == match)
+					{
+						MatchCollection mc = reg.Matches(strBaudRate);
+						if (int.TryParse(mc[0].Value, out BaudRate))
+						{
+						}
+					}
+                    switch (BaudRate)
                     {
-                        case CANBaudRate.BaudRate1000:
+                        case 1000:
                             Timing0 = 0;
                             Timing1 = 0x14;
                             break;
-                        case CANBaudRate.BaudRate800:
+                        case 800:
                             Timing0 = 0;
                             Timing1 = 0x16;
                             break;
-                        case CANBaudRate.BaudRate666:
+                        case 666:
                             Timing0 = 0x80;
                             Timing1 = 0xb6;
                             break;
-                        case CANBaudRate.BaudRate500:
+                        case 500:
                             Timing0 = 0;
                             Timing1 = 0x1c;
                             break;
-                        case CANBaudRate.BaudRate400:
+                        case 400:
                             Timing0 = 0x80;
                             Timing1 = 0xfa;
                             break;
-                        case CANBaudRate.BaudRate250:
+                        case 250:
                             Timing0 = 0x01;
                             Timing1 = 0x1c;
                             break;
-                        case CANBaudRate.BaudRate200:
+                        case 200:
                             Timing0 = 0x81;
                             Timing1 = 0xfa;
                             break;
-                        case CANBaudRate.BaudRate125:
+                        case 125:
                             Timing0 = 0x03;
                             Timing1 = 0x1c;
                             break;
-                        case CANBaudRate.BaudRate100:
+                        case 100:
                             Timing0 = 0x04;
                             Timing1 = 0x1c;
                             break;
-                        case CANBaudRate.BaudRate80:
+                        case 80:
                             Timing0 = 0x83;
                             Timing1 = 0xff;
                             break;
-                        case CANBaudRate.BaudRate50:
+                        case 50:
                             Timing0 = 0x09;
                             Timing1 = 0x1c;
                             break;
                         default:
-                            throw new Exception(string.Format("Wrong baud rate value {0} from setting", BaudRate));
+                            throw new Exception(string.Format("Wrong baud rate value {0} from setting", strBaudRate));
                     }
                 }
                 else
@@ -442,14 +437,14 @@ namespace CAN
                     throw new Exception(string.Format("BaudRate is missing"));
                 }
                 /*
-                 //int CAN_ID
-                    if(true == joCAN.ContainsKey("CAN_ID"))
+                 //int DeviceID
+                    if(true == joCAN.ContainsKey("DeviceID"))
                     {
-                        CanId = (int)joCAN["CAN_ID"];
+                        DeviceID = (int)joCAN["DeviceID"];
                     }
                     else
                     {
-                        throw new Exception(string.Format("CAN_ID is missing"));
+                        throw new Exception(string.Format("DeviceID is missing"));
                     }*/
 
                 //init_config

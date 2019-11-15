@@ -41,7 +41,7 @@ namespace CAN
                 Console.WriteLine("Do nothing");
                 return;
             }
-            CANComm CanTalk = new CANComm(@"D:\1_Code\CAN\CANTest\CANTest\bin\debug\settingsample.json");
+            CANComm CanTalk = new CANComm(@"d:\1_Code\AutomotiveElectronic\CANComm\Debug\settingsample.json");
 
             if (false == CanTalk.OpenDevice(id, channel, out strtemp))
             {
@@ -68,7 +68,7 @@ namespace CAN
 
             List<byte[]> listData = new List<byte[]>();
             listData.Add(command);
-            CanTalk.SendBytes(listData);
+            CanTalk.SendMessages(listData);
 
 //            Thread.Sleep(10000);
 			List<CAN_OBJ> listRes = null;
