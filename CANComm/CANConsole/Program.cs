@@ -76,15 +76,54 @@ namespace CAN
                 List<CAN_OBJ> listRes = null;
                 if (true == CanTalk.ReceiveBytes(out listRes))
                 {
-                    Console.WriteLine(string.Format("Received total {0} can objects:", listRes.Count));
-                    foreach (CAN_OBJ obj in listRes)
+                    Console.WriteLine("Press D for detailed data including ID, or Press d for data part only");
+                    char cRequired = (char)Console.Read();
+
+                    bool bAllData = false;
+                    if (true == cRequired.Equals('D'))
                     {
-                        string line = string.Empty;
-                        for (int i = 0; i < obj.DataLen; i++)
+                        bAllData = true;
+                    }
+                    else if (true == cRequired.Equals('d'))
+                    {
+                        bAllData = false;
+                    }
+                    else
+                    {
+
+                        Console.WriteLine("Unrecgized command. Show data part of frame(s) only");
+                    }
+                    Console.WriteLine(string.Format("Received total {0} can objects:", listRes.Count));
+                    if (bAllData == false) // data part only
+                    {
+                        foreach (CAN_OBJ obj in listRes)
                         {
-                            line += obj.data[i].ToString("X2");
+                            string line = string.Empty;
+                            for (int i = 0; i < obj.DataLen; i++)
+                            {
+                                line += obj.data[i].ToString("X2");
+                            }
+                            Console.WriteLine(line);
                         }
-                        Console.WriteLine(line);
+                    }
+                    else//detailed data
+                    {
+                        Console.WriteLine("Data format:[ID]:,[Data],[SendType],[TimeFlag],[TimeStamp],[Remoteflag]");
+                        foreach (CAN_OBJ obj in listRes)
+                        {
+                            byte byteSendType = obj.SendType;
+                            byte byteTimeFlag = obj.TimeFlag;
+                            uint uiTimeStamp = obj.TimeStamp;
+                            byte byteRemoteFlag = obj.RemoteFlag;
+                            uint uiID = obj.ID;
+                            string strData = string.Empty;
+                            for (int i = 0; i < obj.DataLen; i++)
+                            {
+                                strData += obj.data[i].ToString("X2");
+                            }
+                            string line = string.Format("{0:X8}H:,{1}H,{2},{3},{4},{5}", uiID, strData, byteSendType, byteTimeFlag, uiTimeStamp, byteRemoteFlag);
+                            Console.WriteLine(line);
+                        }
                     }
                 }
                 else
