@@ -70,37 +70,46 @@ namespace CAN
             listData.Add(command);
             CanTalk.SendMessages(listData);
 
-//            Thread.Sleep(10000);
-			List<CAN_OBJ> listRes = null;
-			if(true == CanTalk.ReceiveBytes(out listRes))
-			{
-				Console.WriteLine(string.Format("Received total {0} can objects:", listRes.Count));
-				foreach(CAN_OBJ obj in listRes)
-				{
-					string line = string.Empty;
-					for(int i = 0; i < obj.DataLen; i++)
-					{
-                        line += obj.data[i].ToString("X2");
-					}
-					Console.WriteLine(line);
-				}
-			}
-			else
-			{
-				Console.WriteLine(string.Format("Error in Receive"));
-			}
-
-            Console.WriteLine(string.Format("Device will be auto closed within 5s."));
-            Thread.Sleep(50000);
-
-            if (false == CanTalk.CloseDevice())
+            try
             {
-                Console.WriteLine(string.Format("Failed at close"));
+                //            Thread.Sleep(10000);
+                List<CAN_OBJ> listRes = null;
+                if (true == CanTalk.ReceiveBytes(out listRes))
+                {
+                    Console.WriteLine(string.Format("Received total {0} can objects:", listRes.Count));
+                    foreach (CAN_OBJ obj in listRes)
+                    {
+                        string line = string.Empty;
+                        for (int i = 0; i < obj.DataLen; i++)
+                        {
+                            line += obj.data[i].ToString("X2");
+                        }
+                        Console.WriteLine(line);
+                    }
+                }
+                else
+                {
+                    Console.WriteLine(string.Format("Error in Receive"));
+                }
+
+                Console.WriteLine(string.Format("Device will be auto closed within 5s."));
+                Thread.Sleep(50000);
+
+                if (false == CanTalk.CloseDevice())
+                {
+                    Console.WriteLine(string.Format("Failed at close"));
+                }
+                else
+                {
+                    Console.WriteLine(string.Format("Device closed!"));
+                    Console.WriteLine(string.Format("See you again"));
+                }
             }
-            else
+            catch (Exception ex)
             {
-                Console.WriteLine(string.Format("Device closed!"));
-                Console.WriteLine(string.Format("See you again"));
+                Console.WriteLine("Error Info: {0}", ex.Message);
+                Console.WriteLine("Press any key to quit");
+                Console.Read();
             }
             return;
         }

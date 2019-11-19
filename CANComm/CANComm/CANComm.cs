@@ -54,7 +54,8 @@ namespace CAN
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Format("OpenDevice:{0}", ex.Message));
+				string strErrInfo = ReadError();
+				throw new Exception(string.Format("Failed at open device method: {0}", strErrInfo));
             }
 
 			Connected = true;
@@ -72,7 +73,8 @@ namespace CAN
 			catch(Exception ex)
 			{
 				Connected = false;
-				throw new Exception(string.Format("Failed at close can device @ID:{0}. {1}", Setting.DeviceID, ex.Message));
+				string strErrInfo = ReadError();
+				throw new Exception(string.Format("{0}. Failed at close can device @ID:{1}. {2}", strErrInfo, Setting.DeviceID, ex.Message));
 			}
 			return true;
 		}
@@ -94,7 +96,8 @@ namespace CAN
 			}
 			catch(Exception ex)
 			{
-				throw new Exception(string.Format("Failed at GetReceiveNum with message: {0}", ex.Message));
+				string strErrInfo = ReadError();
+				throw new Exception(string.Format("Failed at CAN check frames in buffer: {0}", strErrInfo));
 			}
 		}
 		
@@ -103,16 +106,29 @@ namespace CAN
             DataList = new List<CAN_OBJ>();
 			CAN_OBJ objFrame = new CAN_OBJ();
 
-            do
-            {
-                objFrame = ReadFrame();
-                if (objFrame.data != null)
-                {
-                    DataList.Add(objFrame);
-                }
-                Thread.Sleep(20);
-            } while (false == BufferEmpty()); //unread frame in instrument
-
+			try
+			{
+	            do
+	            {
+	                objFrame = ReadFrame();
+	                if (objFrame.data != null)
+	                {
+	                    DataList.Add(objFrame);
+	                }
+	                Thread.Sleep(20);
+	            } while (false == BufferEmpty()); //unread frame in instrument
+			}
+			catch(Exception ex)
+			{
+				if(true == ex.Message.StartsWith("Failed at CAN receive: {0}"))
+				{
+					throw new Exception(ex.Message);
+				}
+				else
+				{
+					throw new Exception(string.Format("Failed at SendMessage method with message: {0}", ex.Message));
+				}
+			}
             return true;
 		}
 
@@ -121,11 +137,22 @@ namespace CAN
             CAN_OBJ frame = new CAN_OBJ();
 
             uint uiLen = 1;
-			if(ECANDLL.Receive(Setting.DeviceType, Setting.DeviceID, Setting.Channel, out frame, uiLen, 1) != ECANStatus.STATUS_OK)
+			try
 			{
-			//TODO:
-				//get error
-			}
+				if(ECANDLL.Receive(Setting.DeviceType, Setting.DeviceID, Setting.Channel, out frame, uiLen, 1) != ECANStatus.STATUS_OK)
+				{
+	                string strErrInfo = ReadError();
+	                throw new Exception(string.Format("Failed at CAN receive: {0}", strErrInfo));
+				}
+            }
+            catch (Exception ex)
+            {
+            	if(true == ex.Message.StartsWith("Failed at can receive:"))
+            	{
+					throw new Exception(ex.Message);
+				}
+                throw new Exception(string.Format("Failure happeded at receive method: {0}", ex.Message));
+            }
 
             return frame;
         }
@@ -187,13 +214,13 @@ namespace CAN
 			}
 			catch(Exception ex)
 			{
-				if(true == ex.Message.StartsWith("failed at can transmit with data:"))
+				if(true == ex.Message.StartsWith("Failed at CAN transmit with data:"))
 				{
 					throw new Exception(string.Format("{0}", ex.Message));
 				}
 				else
 				{
-					throw new Exception(string.Format("Failed at SendBytes with message: {0}", ex.Message));
+					throw new Exception(string.Format("Failed at SendMessage with message: {0}", ex.Message));
 				}
 			}
             return true;
@@ -215,18 +242,41 @@ namespace CAN
                 iSizeOfObj = System.Runtime.InteropServices.Marshal.SizeOf(objMessage[0]);
                 if (ECANDLL.Transmit(Setting.DeviceType, Setting.DeviceID, Setting.Channel, objMessage, (ushort)uLen) != ECANStatus.STATUS_OK)
                 {
-                    //TODO:get last error message
-                    throw new Exception(string.Format("failed at can transmit with data: {0}", message.ToString()));
+                    string strErrInfo = ReadError();
+                    throw new Exception(string.Format("Failed at CAN transmit: {0}", strErrInfo));
                 }
             }
             catch (Exception ex)
             {
-                throw new Exception(string.Format("Failed at send message: {0}", message));
+            	if(true == ex.Message.StartsWith("Failed at CAN transmit:"))
+            	{
+					throw new Exception(ex.Message);
+				}
+                throw new Exception(string.Format("Failure happeded at send method: {0}", message));
             }
 
             return true;
         }
         #endregion
+
+		#region Error handling
+        private string ReadError()
+        {
+
+            CAN_ERR_INFO errInfo = new CAN_ERR_INFO();
+
+            if (ECANDLL.ReadErrInfo(Setting.DeviceType, Setting.DeviceID, Setting.Channel, out errInfo) == ECANStatus.STATUS_OK)
+            {
+            	string strErrMessage = string.Empty;
+				strErrMessage = string.Format("Error Code[0x{0:X4}]. Error Text: {0:X4} and  {0:X4}", errInfo.ErrCode, errInfo.Passive_ErrData[0], errInfo.Passive_ErrData[1]);
+				return strErrMessage;
+            }
+            else
+            {
+				throw new Exception("Failed at get error message? Is can device connected?");
+            }
+        }
+		#endregion
     }
 
     public enum CANBaudRate:UInt16
