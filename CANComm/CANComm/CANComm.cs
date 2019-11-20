@@ -9,6 +9,7 @@ using Newtonsoft.Json.Bson;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Text.RegularExpressions;
+using System.Collections;
 
 namespace CAN
 {
@@ -155,6 +156,38 @@ namespace CAN
             }
 
             return frame;
+        }
+
+        public ulong GetBitsFromFrames(CAN_OBJ[] arrOBJ, uint startBit, uint length)
+        {
+            int iLengthOfAll = 0;//unit in Bytes
+            int index = 0;
+            //get lenght of all data
+            foreach (CAN_OBJ obj in arrOBJ)
+            {
+                iLengthOfAll += obj.DataLen;
+            }
+            byte[] byteAll = new byte[iLengthOfAll];
+
+            //get all data in one array
+            foreach (CAN_OBJ obj in arrOBJ)
+            {
+
+                obj.data.CopyTo(byteAll, index);
+                index += obj.DataLen;
+            }
+
+            //get value
+            uint uiMask = (uint)(Math.Pow(2.0, (double)length) - 1);
+            int iMoveLen = sizeof(byte) * 8 * byteAll.Length - (int)(startBit + length - 1);//the length of left shift
+            ulong ulInput = 0; //convert byte[] to ulong
+            for(int i = 0; i < byteAll.Length; i++)
+            {
+                ulInput = ulInput + (uint)byteAll[i] << (8 * (byteAll.Length - i - 1));
+            }
+            ulong ulValue = (ulInput >> iMoveLen) & uiMask;
+
+            return 0xFFFF;
         }
 		#endregion
 
