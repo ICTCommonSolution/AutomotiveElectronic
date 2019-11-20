@@ -53,9 +53,7 @@ namespace CAN
                 Console.WriteLine(string.Format("Further features to be continued!"));
             }
 
-            Console.Write("Press Enter to send demo command: 0x1122334455667788");
-            Console.ReadLine();
-
+            //get command
             byte[] command = new byte[8];
             command[0] = 0x11;
             command[1] = 0x22;
@@ -65,6 +63,24 @@ namespace CAN
             command[5] = 0x66;
             command[6] = 0x77;
             command[7] = 0x88;
+            Console.WriteLine("Please input command to device. Directly press enter for demo command 0x1122334455667788: ");
+            string strSend = (string)Console.ReadLine();
+            if (strSend.Length > 0)
+            {
+                command = StringToByteArray(strSend);
+            }
+
+            //get receive info
+            Console.WriteLine("Please input CAN ID you want to listen. Listening all devices by empty:");
+            string strListen = (string)Console.ReadLine();
+            uint uiCanID = 0;
+            if (strListen.Length > 1)
+            {
+                uiCanID = Convert.ToUInt32(strListen, 16);
+            }
+
+            Console.Write(string.Format("Press Enter to send command 0x{0} :", BitConverter.ToString(command).Replace("-", string.Empty)));
+            Console.ReadLine();
 
             List<byte[]> listData = new List<byte[]>();
             listData.Add(command);
@@ -74,7 +90,17 @@ namespace CAN
             {
                 //            Thread.Sleep(10000);
                 List<CAN_OBJ> listRes = null;
-                if (true == CanTalk.ReceiveBytes(out listRes))
+
+                bool bReceive = false;
+                if (uiCanID != 0)
+                {
+                    bReceive = CanTalk.ReceiveMessage(out listRes, uiCanID, 10000);
+                }
+                else
+                {
+                    bReceive = CanTalk.ReceiveMessage(out listRes, 10000);
+                }
+                if (true == bReceive)
                 {
                     Console.WriteLine("Press D for detailed data including ID, or Press d for data part only");
                     char cRequired = (char)Console.Read();
@@ -131,8 +157,9 @@ namespace CAN
                     Console.WriteLine(string.Format("Error in Receive"));
                 }
 
-                Console.WriteLine(string.Format("Device will be auto closed within 5s."));
-                Thread.Sleep(50000);
+                int iSleep = 5;
+                Console.WriteLine(string.Format("Device will be auto closed within {0}s.", iSleep));
+                Thread.Sleep(iSleep*1000);
 
                 if (false == CanTalk.CloseDevice())
                 {
@@ -151,6 +178,17 @@ namespace CAN
                 Console.Read();
             }
             return;
+        }
+        public static byte[] StringToByteArray(string hex)
+        {
+            if (hex.ToLower().StartsWith("0x"))
+            {
+                hex = hex.Substring(2);
+            }
+            return Enumerable.Range(0, hex.Length)
+                             .Where(x => x % 2 == 0)
+                             .Select(x => Convert.ToByte(hex.Substring(x, 2), 16))
+                             .ToArray();
         }
     }
 }

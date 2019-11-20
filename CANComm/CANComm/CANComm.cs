@@ -102,22 +102,24 @@ namespace CAN
 			}
 		}
 		
-		public bool ReceiveBytes(out List<CAN_OBJ> DataList)
+		public bool ReceiveMessage(out List<CAN_OBJ> DataList, int timeOut)
 		{
             DataList = new List<CAN_OBJ>();
 			CAN_OBJ objFrame = new CAN_OBJ();
 
 			try
 			{
-	            do
-	            {
+                DateTime dtStart = DateTime.Now;
+                TimeSpan dtSpan = new TimeSpan();
+                do
+                {
 	                objFrame = ReadFrame();
 	                if (objFrame.data != null)
 	                {
 	                    DataList.Add(objFrame);
 	                }
-	                Thread.Sleep(20);
-	            } while (false == BufferEmpty()); //unread frame in instrument
+	                Thread.Sleep(50);
+                } while (false == BufferEmpty() && (DateTime.Now - dtStart).TotalMilliseconds < timeOut); //unread frame in instrument
 			}
 			catch(Exception ex)
 			{
@@ -127,12 +129,58 @@ namespace CAN
 				}
 				else
 				{
-					throw new Exception(string.Format("Failed at SendMessage method with message: {0}", ex.Message));
+					throw new Exception(string.Format("Failed at receive message method with message: {0}", ex.Message));
 				}
 			}
             return true;
 		}
 
+        /// <summary>
+        /// Get data from specified CAN ID and the frames from other ID will be ignored. The listening will stopped if no frame come in within 20ms
+        /// </summary>
+        /// <param name="DataList">return the completed frames</param>
+        /// <param name="canID">the desired CAN ID</param>
+        /// <param name="timeOut">The time out of receiving frames</param>
+        /// <returns>read frames successfully or not</returns>
+        public bool ReceiveMessage(out List<CAN_OBJ> DataList, uint canID, int timeOut)
+        {
+            DataList = new List<CAN_OBJ>();
+            CAN_OBJ objFrame = new CAN_OBJ();
+
+            try
+            {
+                DateTime dtStart = DateTime.Now;
+                do
+                {
+                    do
+                    {
+                        objFrame = ReadFrame();
+                        if (objFrame.data != null && objFrame.ID == canID)
+                        {
+                            DataList.Add(objFrame);
+                        }
+                    } while (false == BufferEmpty());//untill no new frame come in.
+                    Thread.Sleep(50);//wait for 20ms
+                } while (false == BufferEmpty() && (DateTime.Now - dtStart).TotalMilliseconds < timeOut); //check again if unread frame from bus
+            }
+            catch (Exception ex)
+            {
+                if (true == ex.Message.StartsWith("Failed at CAN receive: {0}"))
+                {
+                    throw new Exception(ex.Message);
+                }
+                else
+                {
+                    throw new Exception(string.Format("Failed at receive message method with message: {0}", ex.Message));
+                }
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Basicaly function to read a frame.
+        /// </summary>
+        /// <returns>return the completed frame from CAN bus </returns>
         private CAN_OBJ ReadFrame()
         {
             CAN_OBJ frame = new CAN_OBJ();
@@ -189,7 +237,28 @@ namespace CAN
 
             return 0xFFFF;
         }
-		#endregion
+
+        public ulong GetBitsFromFrame(CAN_OBJ canOBJ, uint startBit, uint length)
+        {
+            byte[] byteData = new byte[canOBJ.DataLen];
+
+            //get all data from frame
+            canOBJ.data.CopyTo(byteData, 0);
+
+            //get value
+            uint uiMask = (uint)(Math.Pow(2.0, (double)length) - 1);
+            int iMoveLen = sizeof(byte) * 8 * byteData.Length - (int)(startBit + length - 1);//the length of left shift
+            ulong ulInput = 0; //convert byte[] to ulong
+            for (int i = 0; i < byteData.Length; i++)
+            {
+                ulInput = ulInput + (uint)byteData[i] << (8 * (byteData.Length - i - 1));
+            }
+            ulong ulValue = (ulInput >> iMoveLen) & uiMask;
+
+            return 0xFFFF;
+        }
+
+        #endregion
 
         #region Send Message
         //Send data to BUS
