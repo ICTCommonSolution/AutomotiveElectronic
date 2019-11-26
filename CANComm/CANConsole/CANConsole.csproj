@@ -48,6 +48,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="commandlist.csv" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CANComm\CANComm.csproj">
@@ -58,7 +59,8 @@
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>Copy "$(SolutionDir)Bin\$(ConfigurationName)\*.exe" "$(SolutionDir)Debug\"
-Copy "$(SolutionDir)Bin\$(ConfigurationName)\*.dll" "$(SolutionDir)Debug\"</PostBuildEvent>
+Copy "$(SolutionDir)Bin\$(ConfigurationName)\*.dll" "$(SolutionDir)Debug\"
+Copy "$(ProjectDir)\*.csv" "$(SolutionDir)Debug\"</PostBuildEvent>
   </PropertyGroup>
   <PropertyGroup>
     <PreBuildEvent>if NOT Exist "$(SolutionDir)Debug\" mkdir "$(SolutionDir)Debug\"</PreBuildEvent>

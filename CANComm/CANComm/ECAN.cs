@@ -177,8 +177,14 @@ namespace CAN
 			UInt32 DeviceType,
 			UInt32 DeviceInd,
             UInt32 CANInd);
-    }
-   
 
-    
+        [DllImport("ECANVCI64.dll", EntryPoint = "ClearBuffer")]
+        public static extern ECANStatus ClearBuffer(
+            UInt32 DeviceType,
+            UInt32 DeviceInd,
+            UInt32 CANInd);
+    }
+
+
+
 }

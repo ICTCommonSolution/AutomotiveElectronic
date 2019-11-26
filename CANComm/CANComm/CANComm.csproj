@@ -51,6 +51,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />
+    <None Include="settingsample.json" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Document\" />

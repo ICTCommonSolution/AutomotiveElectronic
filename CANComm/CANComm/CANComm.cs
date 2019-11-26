@@ -64,6 +64,45 @@ namespace CAN
             return true;
         }
 
+        public bool OpenDevice(out string messageOfFalse)
+        {
+            try
+            {
+            	if(true == Connected)
+            	{
+					ECANDLL.CloseDevice(Setting.DeviceType, Setting.DeviceID);
+					Connected = false;
+				}
+
+				//open device
+				if(ECANDLL.OpenDevice(Setting.DeviceType, Setting.DeviceID, 0) != CAN.ECANStatus.STATUS_OK)
+				{
+					messageOfFalse = string.Format("Failed at open device.");
+					return false;
+				}
+				//Init can channel with config
+				if(ECANDLL.InitCAN(Setting.DeviceType, Setting.DeviceID, Setting.Channel, ref Setting.InitCfg) != CAN.ECANStatus.STATUS_OK)
+				{
+					messageOfFalse = string.Format("Failed at initialize device.");
+					return false;
+				}
+				//start can channel
+				if(ECANDLL.StartCAN(Setting.DeviceType, Setting.DeviceID, Setting.Channel) != CAN.ECANStatus.STATUS_OK)
+				{
+					messageOfFalse = string.Format("Failed at initialize device.");
+					return false;
+				}
+            }
+            catch (Exception ex)
+            {
+				string strErrInfo = ReadError();
+				throw new Exception(string.Format("Failed at open device method: {0}", strErrInfo));
+            }
+
+			Connected = true;
+            messageOfFalse = string.Empty;
+            return true;
+        }
 		public bool CloseDevice()
         {
 			try
@@ -98,11 +137,76 @@ namespace CAN
 			catch(Exception ex)
 			{
 				string strErrInfo = ReadError();
-				throw new Exception(string.Format("Failed at CAN check frames in buffer: {0}", strErrInfo));
+				throw new Exception(string.Format("Failed at CAN check frames in buffer: ", strErrInfo));
 			}
 		}
-		
-		public bool ReceiveMessage(out List<CAN_OBJ> DataList, int timeOut)
+
+		public bool ReceiveSingleMessage(out CAN_OBJ canObj, int timeOut)
+		{
+            canObj = new CAN_OBJ();
+
+			try
+			{
+                DateTime dtStart = DateTime.Now;
+                while(false == BufferEmpty() && (DateTime.Now - dtStart).TotalMilliseconds < timeOut)
+                {
+	                Thread.Sleep(50);
+
+                    canObj = ReadFrame();
+                } //unread frame in instrument
+			}
+			catch(Exception ex)
+			{
+				if(true == ex.Message.StartsWith("Failed at CAN receive: "))
+				{
+					throw new Exception(ex.Message);
+				}
+				else
+				{
+					throw new Exception(string.Format("Failed at receive single message method with message: {0}", ex.Message));
+				}
+			}
+            return true;
+		}
+
+        /// <summary>
+        /// Get a frame from specified CAN ID and the frame from other ID will be ignored. The listening will stopped if no frame come in within 20ms
+        /// </summary>
+        /// <param name="canObj">return the completed frame</param>
+        /// <param name="canID">the desired CAN ID</param>
+        /// <param name="timeOut">The time out of receiving frames</param>
+        /// <returns>read frame successfully or not</returns>
+        public bool ReceiveSingleMessage(out CAN_OBJ canObj, uint canID, int timeOut)
+        {
+            canObj = new CAN_OBJ();
+
+            try
+            {
+                DateTime dtStart = DateTime.Now;
+                while (false == BufferEmpty() && (DateTime.Now - dtStart).TotalMilliseconds < timeOut)
+                {
+					Thread.Sleep(50);//wait for 20ms
+                    canObj = ReadFrame();
+                    if (canObj.data != null && canObj.ID == canID)
+                    {
+                    	return true;
+                    }
+                } //check again if unread frame from bus
+            }
+            catch (Exception ex)
+            {
+                if (true == ex.Message.StartsWith("Failed at CAN receive: "))
+                {
+                    throw new Exception(ex.Message);
+                }
+                else
+                {
+                    throw new Exception(string.Format("Failed at receive message method with message: {0}", ex.Message));
+                }
+            }
+            return false;
+        }
+		public bool ReceiveMessages(out List<CAN_OBJ> DataList, int timeOut)
 		{
             DataList = new List<CAN_OBJ>();
 			CAN_OBJ objFrame = new CAN_OBJ();
@@ -110,20 +214,23 @@ namespace CAN
 			try
 			{
                 DateTime dtStart = DateTime.Now;
-                TimeSpan dtSpan = new TimeSpan();
                 do
                 {
-	                objFrame = ReadFrame();
-	                if (objFrame.data != null)
-	                {
-	                    DataList.Add(objFrame);
-	                }
-	                Thread.Sleep(50);
+                    do
+                    {
+                        objFrame = ReadFrame();
+                        if (objFrame.data != null)
+                        {
+                            DataList.Add(objFrame);
+                        }
+                    } while (false == BufferEmpty());
+
+                    Thread.Sleep(50);
                 } while (false == BufferEmpty() && (DateTime.Now - dtStart).TotalMilliseconds < timeOut); //unread frame in instrument
 			}
 			catch(Exception ex)
 			{
-				if(true == ex.Message.StartsWith("Failed at CAN receive: {0}"))
+				if(true == ex.Message.StartsWith("Failed at CAN receive: "))
 				{
 					throw new Exception(ex.Message);
 				}
@@ -142,7 +249,7 @@ namespace CAN
         /// <param name="canID">the desired CAN ID</param>
         /// <param name="timeOut">The time out of receiving frames</param>
         /// <returns>read frames successfully or not</returns>
-        public bool ReceiveMessage(out List<CAN_OBJ> DataList, uint canID, int timeOut)
+        public bool ReceiveMessages(out List<CAN_OBJ> DataList, uint canID, int timeOut)
         {
             DataList = new List<CAN_OBJ>();
             CAN_OBJ objFrame = new CAN_OBJ();
@@ -165,7 +272,7 @@ namespace CAN
             }
             catch (Exception ex)
             {
-                if (true == ex.Message.StartsWith("Failed at CAN receive: {0}"))
+                if (true == ex.Message.StartsWith("Failed at CAN receive: "))
                 {
                     throw new Exception(ex.Message);
                 }
@@ -262,6 +369,70 @@ namespace CAN
 
         #region Send Message
         //Send data to BUS
+        /// <summary>
+        /// Send command (data) with specified ID
+        /// </summary>
+        /// <param name="ID">ID string in hex format without space</param>
+        /// <param name="command">Hex string of command/data, space between bytes</param>
+        /// <returns>sent successfully or not</returns>
+        public bool SendMessage(string ID, string command)
+        {
+            int iLen = 0;
+            string[] strBytes = null;
+            byte[] data = null;
+            CAN_OBJ canObj = new CAN_OBJ();
+
+            //convert hex string to byte[]
+            if (command.IndexOf(@" ") > 0)
+            {
+                iLen = (command.Length + 1) / 3; //space between bytes. e.g. "FE 00"
+                strBytes = command.Split(' ');
+                data = new byte[iLen];
+            }
+            else
+            {
+                iLen = command.Length / 2;//no space in hex string. e.g."FE00"
+                strBytes = new string[iLen];
+                for (int i = 0, index = 0; i + 1 < command.Length; i += 2, index++)
+                {
+                    strBytes[index] = command.Substring(i, 2);
+                }
+                data = new byte[iLen];
+            }
+            for (int index = 0; index < iLen; index++)
+            {
+                data[index] = Convert.ToByte(Int32.Parse(strBytes[index], System.Globalization.NumberStyles.HexNumber));//convert the HEX number string to a character and then to ASIC
+            }
+            UInt32 uiID = Convert.ToUInt32(ID, 16);
+
+            if (uiID > 0x7FF)
+            {
+                canObj.ExternFlag = 0x1;
+            }
+            else
+            {
+                canObj.ExternFlag = 0x0;
+            }
+            canObj.ID = uiID;
+            canObj.RemoteFlag = 0;
+            canObj.Reserved = null;
+            canObj.SendType = 0;
+            canObj.TimeFlag = 0x0;
+            canObj.TimeStamp = 0;
+            canObj.data = new byte[data.Length];
+            data.CopyTo(canObj.data, 0);
+            canObj.DataLen = (byte)data.Length;
+
+            return SendFrame(canObj, data);
+        }
+
+        public bool SendMessage(CAN_OBJ canObj)
+        {
+            byte[] byteData = new byte[canObj.DataLen];
+            canObj.data.CopyTo(byteData, 0);
+
+            return SendFrame(canObj, byteData);
+        }
         public bool SendMessages(List<byte[]> DataList,
                             uint ID = 1,
         					uint TimeStamp = 0,
@@ -336,8 +507,21 @@ namespace CAN
             int iSizeOfObj = 0;
             try
             {
+                byte[] byteData = new byte[8];
+                for (int i = 0; i < byteData.Length; i++)
+                {
+                    if (i < message.Length)
+                    {
+                        byteData[i] = message[i];
+                    }
+                    else
+                    {
+                        byteData[i] = 0x0;
+                    }
+                }
                 objMessage[0] = canOBJ;
-                objMessage[0].data = message;
+                //objMessage[0].data = message;
+                objMessage[0].data = byteData;
                 objMessage[1] = objMessage[0];
 
                 uLen = 1;
@@ -378,7 +562,28 @@ namespace CAN
 				throw new Exception("Failed at get error message? Is can device connected?");
             }
         }
-		#endregion
+        #endregion
+
+        #region ClearBuffer
+        public bool ClearBuffer()
+        {
+            try
+            {
+                if (ECANDLL.ClearBuffer(Setting.DeviceType, Setting.DeviceID, Setting.Channel) == ECANStatus.STATUS_OK)
+                {
+                    return true;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+        #endregion
     }
 
     public enum CANBaudRate:UInt16
