@@ -148,31 +148,10 @@ namespace CAN
 					Console.WriteLine(string.Format("Further features to be continued!"));
 				}
 
-                //for (int index = 0; index < listCommand.Count; index++)
-                //{
-                //    Dictionary<string, string> dictCommand = listCommand[index];
-                //    if (true == dictCommand["TxRx"].ToUpper().Equals("TX"))
-                //    {
-                //        //if (true == SendOrIgnore(dictCommand["ID"], dictCommand["Command"]))
-                //        {
-                //            SendCommand(CanTalk, dictCommand);
-                //        }
-                //    }
-                //    else if (true == dictCommand["TxRx"].ToUpper().Equals("RX"))
-                //    {
-                //        ReceiveMessage(CanTalk, dictCommand);
-                //    }
-                //    else
-                //    {
-                //        Console.WriteLine(string.Format("Skip unkwon command. Command type: {0}", dictCommand["TxRx"]));
-                //    }
-                //}
-
-                //for (int index = 0; index < 100; index++)
-                    for (int index = 0; index < listCan.Count; index++)
-                    {
-                        Console.WriteLine("Send: {0}", CommandInfo(listCan[index]));
-                    SendCommand(CanTalk, listCan[index]);
+                for (int index = 0; index < listCan.Count; index++)
+                {
+                    Console.WriteLine("Send: {0}", CommandInfo(listCan[index]));
+                SendCommand(CanTalk, listCan[index]);
                 }
 			}
 			catch(Exception ex)

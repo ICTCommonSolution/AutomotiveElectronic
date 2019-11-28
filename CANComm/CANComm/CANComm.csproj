@@ -46,8 +46,11 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="CANComm.cs" />
+    <Compile Include="CANComm_Send.cs" />
+    <Compile Include="CANSetting.cs" />
     <Compile Include="ECAN.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="CANComm_Receive.cs" />
     <Compile Include="Resource.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
