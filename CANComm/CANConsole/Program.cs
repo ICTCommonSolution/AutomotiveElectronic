@@ -83,11 +83,12 @@ namespace CAN
             try
             {
                 //listCommand = LoadCommandFile(commandFile);
-                listCommand = LoadSimpleCommandFileToCanList(commandFile);
+//                listCommand = LoadSimpleCommandFileToCanList(commandFile);
 
                 CanTalk = new CANComm(configFile);
 
-                if (false == CanTalk.OpenDevice(out strtemp))
+                if (false == CanTalk.OpenDevice(0,0, out strtemp, true, true))
+                //if (false == CanTalk.OpenDevice(out strtemp))
                 {
                     Console.WriteLine(string.Format("Failed with message: {0}", strtemp));
                 }
@@ -96,25 +97,16 @@ namespace CAN
                     Console.WriteLine(string.Format("Device Opened!"));
                     Console.WriteLine(string.Format("Further features to be continued!"));
                 }
+                Thread.Sleep(5000);
+                Console.WriteLine("Press key!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!");
+                //ReceiveTest(CanTalk);
+                Console.WriteLine("Received************************************************************");
+                Thread.Sleep(5000);
 
-                do
-                {
-                    for (int index = 0; index < listCommand.Count; index++)
-                    //for (int index = 0; index < listCan.Count; index++)
-                    {
-                        string[] strPara = listCommand[index];
-                        Console.WriteLine("Send: {0},{1}", strPara[0], strPara[1]);
-                        SendCommand(CanTalk, strPara[0], strPara[1]);
-                    }
-
-                    Thread.Sleep(800);
-                    CanTalk.ClearBuffer();
-                //} while (((char)Console.Read()).Equals('q') == false);
-                } while (true) ;
-            //receive message.
-            Receive(CanTalk);
-
-                int iSleep = 20;
+                //disable periodic message
+                CanTalk.EnablePeriodicMessage = false;
+                CanTalk.EnableReceive = false;
+                int iSleep = 2;
                 Console.WriteLine(string.Format("Device will be auto closed within {0}s.", iSleep));
                 Thread.Sleep(iSleep * 1000);
 
@@ -132,10 +124,10 @@ namespace CAN
             { }
             return;
         }
-                private static void RunVectorCommandList(string configFile, string commandFile)
+
+        private static void RunVectorCommandList(string configFile, string commandFile)
         {
             CANComm CanTalk = null;
-            List<Dictionary<string, string>> listCommand = null;
             List<CAN_OBJ> listCan = null;
             string strtemp = string.Empty;
 
@@ -182,7 +174,6 @@ namespace CAN
                         Console.WriteLine("Send: {0}", CommandInfo(listCan[index]));
                     SendCommand(CanTalk, listCan[index]);
                 }
-
 			}
 			catch(Exception ex)
 			{
@@ -477,6 +468,71 @@ namespace CAN
             return command;
         }
 
+        private static void ReceiveTest(CANComm canTalk)
+        {
+            try
+            {
+                Console.WriteLine("enter receivetest");
+                canTalk.PeriodicMessageThread.Suspend();
+                while (canTalk.PeriodicMessageThread.ThreadState != (ThreadState.Suspended | ThreadState.Background))
+                {
+                    Thread.Sleep(1);
+                }
+                do
+                {
+                    canTalk.ClearBuffer();
+                    Thread.Sleep(50);
+                } while (canTalk.BufferEmpty() != true);
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("[Err][ReceiveTest][Sus & Clear]:{0}", ex.Message);
+            }
+            Console.WriteLine("Press key!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!1");
+            List<CAN_OBJ> listRes = null;
+            bool bReceive = false;
+            //Thread.Sleep(500);
+            try
+            {
+                bReceive = canTalk.ReceiveMessages(out listRes, 10000);
+                if (true == bReceive)
+                {
+                    Console.WriteLine(string.Format("Received total {0} can objects:", listRes.Count));
+                    Console.WriteLine("Data format:[ID]:,[Data],[SendType],[TimeFlag],[TimeStamp],[Remoteflag]");
+                    foreach (CAN_OBJ obj in listRes)
+                    {
+                        byte byteSendType = obj.SendType;
+                        byte byteTimeFlag = obj.TimeFlag;
+                        uint uiTimeStamp = obj.TimeStamp;
+                        byte byteRemoteFlag = obj.RemoteFlag;
+                        uint uiID = obj.ID;
+                        string strData = string.Empty;
+                        for (int i = 0; i < obj.DataLen; i++)
+                        {
+                            strData += obj.data[i].ToString("X2");
+                        }
+                        string line = string.Format("{0:X8}H:,{1}H,{2},{3},{4},{5}", uiID, strData, byteSendType, byteTimeFlag, uiTimeStamp, byteRemoteFlag);
+                        Console.WriteLine(line);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[Err][ReceiveTest][Receive]:{0}", ex.Message);
+            }
+            try
+            {
+                canTalk.PeriodicMessageThread.Resume();
+                while (canTalk.PeriodicMessageThread.ThreadState != (ThreadState.Running | ThreadState.Background))
+                {
+                    Thread.Sleep(1);
+                }
+            }
+            catch(Exception ex)
+            {
+                Console.WriteLine("[Err][ReceiveTest][Resume]:{0}", ex.Message);
+            }
+        }
         private static void Receive(CANComm canTalk)
         {
             try

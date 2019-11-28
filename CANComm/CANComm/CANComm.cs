@@ -10,6 +10,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using System.Text.RegularExpressions;
 using System.Collections;
+using System.Reflection;
 
 namespace CAN
 {
@@ -17,9 +18,150 @@ namespace CAN
     {
     	public bool Connected { get; private set; }
         public CANSetting Setting;
+        public Thread PeriodicMessageThread = null;
+        public Thread ReceiveThread = null;
+        private List<string[]> PeriodicCommands = null;
+        private List<CAN_OBJ> listReceivedFrame = null;
+        public bool EnablePeriodicMessage { get; set; }
+        public bool EnableReceive { get; set; }
+        /// <summary>
+        /// Initial instance with settings from file.
+        /// </summary>
+        /// <param name="settingFile">setting file name</param>
         public CANComm(string settingFile)
     	{
             Setting = new CANSetting(settingFile);
+        }
+        public CANComm(UInt16 deviceType, UInt16 deviceID, UInt16 channel, UInt16 accCode, UInt32 accMask, byte filter, byte mode, string baudRate)
+        {
+            Setting = new CANSetting(deviceType, deviceID, channel, accCode, accMask, filter, mode, baudRate);
+        }
+
+        public void ThreadReceive(object obj)
+        {
+            string str = obj as string;
+            if (listReceivedFrame == null)
+            {
+                listReceivedFrame = new List<CAN_OBJ>();
+            }
+
+            while (EnableReceive)
+            {
+                try
+                {
+                    //ReceiveSingleMessage(out canObj, 5);
+                    CAN_OBJ canObj = ReadFrame();
+                    if (canObj.DataLen > 0)
+                    {
+                        listReceivedFrame.Add(canObj);
+                        //debug purpose. To be deleted later
+                        Console.WriteLine("ReceiveThread:,[{0:X8}],[{1}]", canObj.ID, BitConverter.ToString(canObj.data).Replace("-", string.Empty));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("[Err][ThreadReceive]:{0}", ex.Message);
+                }
+            }
+            if (false == EnableReceive)
+            {
+                ReceiveThread.Abort();
+                if (ReceiveThread.ThreadState != ThreadState.Aborted)
+                {
+                    Thread.Sleep(100);
+                }
+            }
+        }
+            public void ThreadPeriodicMessagePara(object obj)
+        {
+            string str = obj as string;
+            if (PeriodicCommands == null)
+            {
+                Assembly assm = Assembly.GetExecutingAssembly();
+                string strAlllines = (string)Resource.ResourceManager.GetObject("PeriodicSequence");
+                PeriodicCommands = LoadCommandList(strAlllines);
+            }
+            while (true == EnablePeriodicMessage)
+            {
+                foreach (string[] command in PeriodicCommands)
+                {
+                    SendMessage(command[0], command[1]);
+                    Thread.Sleep(25);
+                }
+
+                if (false == EnablePeriodicMessage)
+                {
+                    PeriodicMessageThread.Abort();
+                    if (PeriodicMessageThread.ThreadState != ThreadState.Aborted)
+                    {
+                        Thread.Sleep(100);
+                    }
+                }
+            }
+        }
+
+        /// <summary>
+        /// load simple commands file. Example of command line: 12b,1122334455667788 or: 12b,11 22 33 44 55 66 77 88
+        /// </summary>
+        /// <param name="commandFile">simple command list file</param>
+        /// <returns></returns>
+        private static List<string[]> LoadCommandList(string commandFile)
+        {
+            List<string[]> listCommand = new List<string[]>();
+
+            try
+            {
+                string[] lines = null;
+                if (false == File.Exists(commandFile))
+                {
+                    char[] separator = { '\n', '\r' };
+                    lines = commandFile.Split(separator, StringSplitOptions.RemoveEmptyEntries);
+                }
+                else
+                {
+                    lines = File.ReadAllLines(commandFile);
+                }
+                foreach (string line in lines)
+                {
+                    string[] strSplitted = line.Split(',');
+                    string[] strPara = new string[2];
+                    strPara[0] = strSplitted[0].Trim();
+                    strPara[1] = strSplitted[1].Trim();
+                    listCommand.Add(strPara);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Error in load simple command file with message: {0}", ex.Message));
+            }
+            return listCommand;
+        }
+        public bool OpenDevice(UInt16 devID, UInt16 channel, out string messageOfFalse, bool startPeriodicMessage, bool enableReceive)
+        {
+            if (false == OpenDevice(devID, channel, out messageOfFalse))
+            {
+                return false;
+            }
+            //TODO:
+            //Enable background thread: sending periodic message.
+
+            Thread.Sleep(1000);
+            if (true == startPeriodicMessage)
+            {
+                EnablePeriodicMessage = startPeriodicMessage;
+                PeriodicMessageThread = new Thread(new ParameterizedThreadStart(ThreadPeriodicMessagePara));
+                PeriodicMessageThread.IsBackground = true;
+                PeriodicMessageThread.Start("hello");
+           }
+            if (true == enableReceive)
+            {
+                EnableReceive = enableReceive;
+
+                ReceiveThread = new Thread(new ParameterizedThreadStart(ThreadReceive));
+                ReceiveThread.IsBackground = false;
+                ReceiveThread.Start("World");
+            }
+            return true;
         }
 
         public bool OpenDevice(UInt16 devID, UInt16 channel, out string messageOfFalse)
@@ -64,6 +206,17 @@ namespace CAN
             return true;
         }
 
+        public bool OpenDevice(out string messageOfFalse, bool startPeriodicMessage)
+        {
+            if (false == OpenDevice(out messageOfFalse))
+            {
+                return false;
+            }
+            //TODO:
+            //Enable background thread: sending periodic message.
+
+            return true;
+        }
         public bool OpenDevice(out string messageOfFalse)
         {
             try
@@ -120,7 +273,7 @@ namespace CAN
 		}
 
 		#region Receive Message
-		private bool BufferEmpty()
+		public bool BufferEmpty()
 		{
 			try
 			{
@@ -148,13 +301,19 @@ namespace CAN
 			try
 			{
                 DateTime dtStart = DateTime.Now;
-                while(false == BufferEmpty() && (DateTime.Now - dtStart).TotalMilliseconds < timeOut)
+                while((DateTime.Now - dtStart).TotalMilliseconds < timeOut)
                 {
-	                Thread.Sleep(50);
-
-                    canObj = ReadFrame();
+                    if (false == BufferEmpty())
+                    {
+                        canObj = ReadFrame();
+                        if (canObj.DataLen > 0)
+                        {
+                            return true;
+                        }
+                    }
+                    Thread.Sleep(5);
                 } //unread frame in instrument
-			}
+            }
 			catch(Exception ex)
 			{
 				if(true == ex.Message.StartsWith("Failed at CAN receive: "))
@@ -183,13 +342,16 @@ namespace CAN
             try
             {
                 DateTime dtStart = DateTime.Now;
-                while (false == BufferEmpty() && (DateTime.Now - dtStart).TotalMilliseconds < timeOut)
+                while ((DateTime.Now - dtStart).TotalMilliseconds < timeOut)
                 {
-					Thread.Sleep(50);//wait for 20ms
-                    canObj = ReadFrame();
-                    if (canObj.data != null && canObj.ID == canID)
+                    if (false == BufferEmpty())
                     {
-                    	return true;
+                        Thread.Sleep(5);//wait for 5ms
+                        canObj = ReadFrame();
+                        if (canObj.data != null && canObj.ID == canID)
+                        {
+                            return true;
+                        }
                     }
                 } //check again if unread frame from bus
             }
@@ -206,7 +368,8 @@ namespace CAN
             }
             return false;
         }
-		public bool ReceiveMessages(out List<CAN_OBJ> DataList, int timeOut)
+		public bool ReceiveMessages(out List<CAN_OBJ> DataList,
+                                int timeOut)//total timeout. if frames are available, the actual time may exceed timeOut
 		{
             DataList = new List<CAN_OBJ>();
 			CAN_OBJ objFrame = new CAN_OBJ();
@@ -214,19 +377,29 @@ namespace CAN
 			try
 			{
                 DateTime dtStart = DateTime.Now;
-                do
+                while (true)
                 {
-                    do
+                    if (false == BufferEmpty()) //unread frame in instrument
                     {
                         objFrame = ReadFrame();
-                        if (objFrame.data != null)
+                        if (objFrame.DataLen > 0)
                         {
                             DataList.Add(objFrame);
                         }
-                    } while (false == BufferEmpty());
-
-                    Thread.Sleep(50);
-                } while (false == BufferEmpty() && (DateTime.Now - dtStart).TotalMilliseconds < timeOut); //unread frame in instrument
+                    }
+                    else if ((DateTime.Now - dtStart).TotalMilliseconds > timeOut)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        Thread.Sleep(Setting.MaxInterval);
+                        if (true == BufferEmpty()) //unread frame in instrument
+                        {
+                            break;//time exceeds the max interval, don't wait.
+                        }
+                    }
+                } 
 			}
 			catch(Exception ex)
 			{
@@ -257,18 +430,29 @@ namespace CAN
             try
             {
                 DateTime dtStart = DateTime.Now;
-                do
+                while (true)
                 {
-                    do
+                    if (false == BufferEmpty()) //unread frame in instrument
                     {
                         objFrame = ReadFrame();
-                        if (objFrame.data != null && objFrame.ID == canID)
+                        if (objFrame.DataLen > 0 && objFrame.ID == canID)
                         {
                             DataList.Add(objFrame);
                         }
-                    } while (false == BufferEmpty());//untill no new frame come in.
-                    Thread.Sleep(50);//wait for 20ms
-                } while (false == BufferEmpty() && (DateTime.Now - dtStart).TotalMilliseconds < timeOut); //check again if unread frame from bus
+                    }
+                    else if ((DateTime.Now - dtStart).TotalMilliseconds > timeOut)
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        Thread.Sleep(Setting.MaxInterval);
+                        if (true == BufferEmpty()) //unread frame in instrument
+                        {
+                            break;//time exceeds the max interval, don't wait.
+                        }
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -292,22 +476,25 @@ namespace CAN
         {
             CAN_OBJ frame = new CAN_OBJ();
 
-            uint uiLen = 1;
-			try
-			{
-				if(ECANDLL.Receive(Setting.DeviceType, Setting.DeviceID, Setting.Channel, out frame, uiLen, 1) != ECANStatus.STATUS_OK)
-				{
-	                string strErrInfo = ReadError();
-	                throw new Exception(string.Format("Failed at CAN receive: {0}", strErrInfo));
-				}
-            }
-            catch (Exception ex)
+            if (false == BufferEmpty())
             {
-            	if(true == ex.Message.StartsWith("Failed at can receive:"))
-            	{
-					throw new Exception(ex.Message);
-				}
-                throw new Exception(string.Format("Failure happeded at receive method: {0}", ex.Message));
+                uint uiLen = 1;
+                try
+                {
+                    if (ECANDLL.Receive(Setting.DeviceType, Setting.DeviceID, Setting.Channel, out frame, uiLen, 1) != ECANStatus.STATUS_OK)
+                    {
+                        string strErrInfo = ReadError();
+                        throw new Exception(string.Format("Failed at CAN receive: {0}", strErrInfo));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    if (true == ex.Message.StartsWith("Failed at can receive:"))
+                    {
+                        throw new Exception(ex.Message);
+                    }
+                    throw new Exception(string.Format("Failure happeded at receive method: {0}", ex.Message));
+                }
             }
 
             return frame;
@@ -629,7 +816,78 @@ namespace CAN
 		public UInt16 DeviceType { get; set; }
 		public UInt16 Channel { get; set;}
         public INIT_CONFIG InitCfg;
+        public UInt16 MaxInterval { get; set; }
 
+        public CANSetting(UInt16 deviceType, UInt16 deviceID, UInt16 channel, UInt16 accCode, UInt32 accMask, byte filter, byte mode, string baudRate)
+        {
+            DeviceType = deviceType;
+            DeviceID = deviceID;
+            Channel = channel;
+            AccCode = accCode;
+            AccMask = accMask;
+            Filter = filter;
+            Mode = mode;
+            string pattern = @"\d+";
+            Regex reg = new Regex(pattern);
+            bool match = reg.IsMatch(baudRate);
+            int BaudRate = -1;
+            if (true == match)
+            {
+                MatchCollection mc = reg.Matches(baudRate);
+                if (int.TryParse(mc[0].Value, out BaudRate))
+                {
+                }
+            }
+            switch (BaudRate)
+            {
+                case 1000:
+                    Timing0 = 0;
+                    Timing1 = 0x14;
+                    break;
+                case 800:
+                    Timing0 = 0;
+                    Timing1 = 0x16;
+                    break;
+                case 666:
+                    Timing0 = 0x80;
+                    Timing1 = 0xb6;
+                    break;
+                case 500:
+                    Timing0 = 0;
+                    Timing1 = 0x1c;
+                    break;
+                case 400:
+                    Timing0 = 0x80;
+                    Timing1 = 0xfa;
+                    break;
+                case 250:
+                    Timing0 = 0x01;
+                    Timing1 = 0x1c;
+                    break;
+                case 200:
+                    Timing0 = 0x81;
+                    Timing1 = 0xfa;
+                    break;
+                case 125:
+                    Timing0 = 0x03;
+                    Timing1 = 0x1c;
+                    break;
+                case 100:
+                    Timing0 = 0x04;
+                    Timing1 = 0x1c;
+                    break;
+                case 80:
+                    Timing0 = 0x83;
+                    Timing1 = 0xff;
+                    break;
+                case 50:
+                    Timing0 = 0x09;
+                    Timing1 = 0x1c;
+                    break;
+                default:
+                    throw new Exception(string.Format("Wrong baud rate value {0} from setting", baudRate));
+            }
+        }
         public CANSetting(string file) 
         {
             if(false == File.Exists(file))
@@ -728,6 +986,15 @@ namespace CAN
                 else
                 {
                     throw new Exception(string.Format("Channel is missing"));
+                }
+                //UInt16 MaxInterval
+                if (true == joCAN.ContainsKey("MaxInterval"))
+                {
+                    MaxInterval = (UInt16)joCAN["MaxInterval"];
+                }
+                else
+                {
+                    MaxInterval = 100;//unit in ms. default value
                 }
                 //UInt16 BaudRate
                 if (true == joCAN.ContainsKey("BaudRate"))

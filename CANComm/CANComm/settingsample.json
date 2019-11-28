@@ -8,6 +8,7 @@
     "AccMask": 16777215,
     "Filter": 0,
     "Mode": 0,
-    "BaudRate": "500"
+    "BaudRate": "500",
+    "MaxInterval": 100
   }
 }
