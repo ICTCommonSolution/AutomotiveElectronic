@@ -49,11 +49,13 @@ namespace CAN
 				{
 					if (false == BufferEmpty())
 					{
-						canObj = ReadFrame();
-						if (canObj.DataLen > 0)
-						{
-							return true;
-						}
+                        {
+                            canObj = ReadFrame();
+                            if (canObj.DataLen > 0)
+                            {
+                                return true;
+                            }
+                        }
 					}
 					Thread.Sleep(5);
 				} //unread frame in instrument
@@ -222,23 +224,29 @@ namespace CAN
 		
 			if (false == BufferEmpty())
 			{
-				uint uiLen = 1;
-				try
-				{
-					if (ECANDLL.Receive(Setting.DeviceType, Setting.DeviceID, Setting.Channel, out frame, uiLen, 1) != ECANStatus.STATUS_OK)
-					{
-						string strErrInfo = ReadError();
-						throw new Exception(string.Format("Failed at CAN receive: {0}", strErrInfo));
-					}
-				}
-				catch (Exception ex)
-				{
-					if (true == ex.Message.StartsWith("Failed at can receive:"))
-					{
-						throw new Exception(ex.Message);
-					}
-					throw new Exception(string.Format("Failure happeded at receive method: {0}", ex.Message));
-				}
+                lock (this)
+                {
+                    uint uiLen = 1;
+                    try
+                    {
+                        lock (this)
+                        {
+                            if (ECANDLL.Receive(Setting.DeviceType, Setting.DeviceID, Setting.Channel, out frame, uiLen, 1) != ECANStatus.STATUS_OK)
+                            {
+                                string strErrInfo = ReadError();
+                                throw new Exception(string.Format("Failed at CAN receive: {0}", strErrInfo));
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        if (true == ex.Message.StartsWith("Failed at can receive:"))
+                        {
+                            throw new Exception(ex.Message);
+                        }
+                        throw new Exception(string.Format("Failure happeded at receive method: {0}", ex.Message));
+                    }
+                }
 			}
 		
 			return frame;

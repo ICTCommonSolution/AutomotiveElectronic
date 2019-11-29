@@ -154,32 +154,35 @@ namespace CAN
 			CAN_OBJ[] objMessage = new CAN_OBJ[2];
 			UInt16 uLen = 0;
 			int iSizeOfObj = 0;
-			try
-			{
-				byte[] byteData = new byte[8];
-				for (int i = 0; i < byteData.Length; i++)
-				{
-					if (i < message.Length)
-					{
-						byteData[i] = message[i];
-					}
-					else
-					{
-						byteData[i] = 0x0;
-					}
-				}
-				objMessage[0] = canOBJ;
-				//objMessage[0].data = message;
-				objMessage[0].data = byteData;
-				objMessage[1] = objMessage[0];
-		
-				uLen = 1;
-				iSizeOfObj = System.Runtime.InteropServices.Marshal.SizeOf(objMessage[0]);
-				if (ECANDLL.Transmit(Setting.DeviceType, Setting.DeviceID, Setting.Channel, objMessage, (ushort)uLen) != ECANStatus.STATUS_OK)
-				{
-					string strErrInfo = ReadError();
-					throw new Exception(string.Format("Failed at CAN transmit: {0}", strErrInfo));
-				}
+            try
+            {
+                byte[] byteData = new byte[8];
+                for (int i = 0; i < byteData.Length; i++)
+                {
+                    if (i < message.Length)
+                    {
+                        byteData[i] = message[i];
+                    }
+                    else
+                    {
+                        byteData[i] = 0x0;
+                    }
+                }
+                objMessage[0] = canOBJ;
+                //objMessage[0].data = message;
+                objMessage[0].data = byteData;
+                objMessage[1] = objMessage[0];
+
+                uLen = 1;
+                iSizeOfObj = System.Runtime.InteropServices.Marshal.SizeOf(objMessage[0]);
+                lock (this)
+                {
+                    if (ECANDLL.Transmit(Setting.DeviceType, Setting.DeviceID, Setting.Channel, objMessage, (ushort)uLen) != ECANStatus.STATUS_OK)
+                    {
+                        string strErrInfo = ReadError();
+                        throw new Exception(string.Format("Failed at CAN transmit: {0}", strErrInfo));
+                    }
+                }
 			}
 			catch (Exception ex)
 			{

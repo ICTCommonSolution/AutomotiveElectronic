@@ -22,8 +22,8 @@ namespace CAN
         public Thread ReceiveThread = null;
         private List<string[]> PeriodicCommands = null;
         private List<CAN_OBJ> listReceivedFrame = null;
-        public bool EnablePeriodicMessage { get; set; }
-        public bool EnableReceive { get; set; }
+        public bool EnablePeriodicMessageThread { get; set; }
+        public bool EnableReceiveThread { get; set; }
 		public bool EnableClearBuffer{private get; set; }
         /// <summary>
         /// Initial instance with settings from file.
@@ -46,7 +46,7 @@ namespace CAN
                 listReceivedFrame = new List<CAN_OBJ>();
             }
 
-            while (EnableReceive)
+            while (EnableReceiveThread)
             {
                 try
                 {
@@ -55,12 +55,15 @@ namespace CAN
 					ClearBuffer(EnableClearBuffer);
 
                     //ReceiveSingleMessage(out canObj, 5);
-                    CAN_OBJ canObj = ReadFrame();
-                    if (canObj.DataLen > 0)
+                    lock (listReceivedFrame)//lock is not verified
                     {
-                        listReceivedFrame.Add(canObj);
-                        //debug purpose. To be deleted later
-                        Console.WriteLine("ReceiveThread:,[{0:X8}],[{1}]", canObj.ID, BitConverter.ToString(canObj.data).Replace("-", string.Empty));
+                        CAN_OBJ canObj = ReadFrame();
+                        if (canObj.DataLen > 0)
+                        {
+                            listReceivedFrame.Add(canObj);
+                            //debug purpose. To be deleted later
+                            Console.WriteLine("ReceiveThread:,[{0:X8}],[{1}]", canObj.ID, BitConverter.ToString(canObj.data).Replace("-", string.Empty));
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -69,7 +72,7 @@ namespace CAN
                 }
 
 				//abort if global vairiable is turned off.
-	            if (false == EnableReceive)
+	            if (false == EnableReceiveThread)
 	            {
 	                ReceiveThread.Abort();
 	                while (ReceiveThread.ThreadState != ThreadState.Aborted)
@@ -91,7 +94,7 @@ namespace CAN
 
 			try
 			{
-	            while (true == EnablePeriodicMessage)
+	            while (true == EnablePeriodicMessageThread)
 	            {
 	                foreach (string[] command in PeriodicCommands)
 	                {
@@ -99,7 +102,7 @@ namespace CAN
 	                    Thread.Sleep(25);
 	                }
 
-	                if (false == EnablePeriodicMessage)
+	                if (false == EnablePeriodicMessageThread)
 	                {
 	                    PeriodicMessageThread.Abort();
 	                    while (PeriodicMessageThread.ThreadState != ThreadState.Aborted)
@@ -162,14 +165,14 @@ namespace CAN
             Thread.Sleep(waitAfterOpen);
             if (true == startPeriodicMessage)
             {
-                EnablePeriodicMessage = startPeriodicMessage;
+                EnablePeriodicMessageThread = startPeriodicMessage;
                 PeriodicMessageThread = new Thread(new ParameterizedThreadStart(ThreadPeriodicMessagePara));
                 PeriodicMessageThread.IsBackground = true;
                 PeriodicMessageThread.Start("hello");
            }
             if (true == enableReceive)
             {
-                EnableReceive = enableReceive;
+                EnableReceiveThread = enableReceive;
 
                 ReceiveThread = new Thread(new ParameterizedThreadStart(ThreadReceive));
                 ReceiveThread.IsBackground = false;
@@ -207,14 +210,14 @@ namespace CAN
 			Thread.Sleep(waitAfterOpen);
 			if (true == startPeriodicMessage)
 			{
-				EnablePeriodicMessage = startPeriodicMessage;
+                EnablePeriodicMessageThread = startPeriodicMessage;
 				PeriodicMessageThread = new Thread(new ParameterizedThreadStart(ThreadPeriodicMessagePara));
 				PeriodicMessageThread.IsBackground = true;
 				PeriodicMessageThread.Start("hello");
 			}
 			if (true == enableReceive)
 			{
-				EnableReceive = enableReceive;
+                EnableReceiveThread = enableReceive;
 
 				ReceiveThread = new Thread(new ParameterizedThreadStart(ThreadReceive));
 				ReceiveThread.IsBackground = false;
@@ -268,7 +271,7 @@ namespace CAN
         	if(true == Connected)
 			{
 				//Abort period message thread before close
-				if(true == EnablePeriodicMessage)
+				if(true == EnablePeriodicMessageThread)
 				{
 					PeriodicMessageThread.Abort();
 					while(PeriodicMessageThread.ThreadState != ThreadState.Aborted)
@@ -277,7 +280,7 @@ namespace CAN
 					}
 				}
 				//Abort receiving thread before close
-				if(true == EnableReceive)
+				if(true == EnableReceiveThread)
 				{
 	                ReceiveThread.Abort();
 	                while(ReceiveThread.ThreadState != ThreadState.Aborted)
@@ -398,25 +401,28 @@ namespace CAN
 		{
 			if(true == ClearOnce)
 			{
-				try
-				{
-					//clear the list at the same time.
-					listReceivedFrame.Clear();
+                lock (listReceivedFrame)
+                {
+                    try
+                    {
+                        //clear the list at the same time.
+                        listReceivedFrame.Clear();
 
-					if (ECANDLL.ClearBuffer(Setting.DeviceType, Setting.DeviceID, Setting.Channel) == ECANStatus.STATUS_OK)
-					{
-                        EnableClearBuffer = false;//reset global variable.
-                        return true;
-					}
-					else
-					{
-						return false;
-					}
-				}
-				catch (Exception ex)
-				{
-					return false;
-				}
+                        if (ECANDLL.ClearBuffer(Setting.DeviceType, Setting.DeviceID, Setting.Channel) == ECANStatus.STATUS_OK)
+                        {
+                            EnableClearBuffer = false;//reset global variable.
+                            return true;
+                        }
+                        else
+                        {
+                            return false;
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        return false;
+                    }
+                }
 			}
             return true;
         }
