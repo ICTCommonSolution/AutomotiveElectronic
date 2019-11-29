@@ -104,8 +104,8 @@ namespace CAN
                 Thread.Sleep(5000);
 
                 //disable periodic message
-                CanTalk.EnablePeriodicMessage = false;
-                CanTalk.EnableReceive = false;
+                CanTalk.EnablePeriodicMessageThread = false;
+                CanTalk.EnableReceiveThread = false;
                 int iSleep = 2;
                 Console.WriteLine(string.Format("Device will be auto closed within {0}s.", iSleep));
                 Thread.Sleep(iSleep * 1000);
@@ -665,13 +665,12 @@ namespace CAN
 			
 			try
 			{
-				//			  Thread.Sleep(10000);
 				List<CAN_OBJ> listRes = null;
 			
 				bool bReceive = false;
 				if (uiCanID != 0)
 				{
-					bReceive = CanTalk.ReceiveMessages(out listRes, uiCanID, 10000);
+					bReceive = CanTalk.ReceiveMessagesByID(out listRes, uiCanID, 10000);
 				}
 				else
 				{
