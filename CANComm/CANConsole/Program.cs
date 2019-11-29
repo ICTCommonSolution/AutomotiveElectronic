@@ -87,7 +87,7 @@ namespace CAN
 
                 CanTalk = new CANComm(configFile);
 
-                if (false == CanTalk.OpenDevice(0,0, out strtemp, true, true))
+                if (false == CanTalk.OpenDevice(0,0, out strtemp, 1000, true, true))//1000ms for wait after open device
                 //if (false == CanTalk.OpenDevice(out strtemp))
                 {
                     Console.WriteLine(string.Format("Failed with message: {0}", strtemp));
