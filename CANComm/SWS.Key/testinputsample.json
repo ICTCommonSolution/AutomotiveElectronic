@@ -1,0 +1,10 @@
+{
+  "SWS":
+  {
+	"Key":
+	  {
+		"WaitAfterOpen": 1000,
+		"ReadTimeOut": 100000
+	  }
+  }
+}

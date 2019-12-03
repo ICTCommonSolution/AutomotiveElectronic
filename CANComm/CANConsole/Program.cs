@@ -4,8 +4,10 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
-using CAN;
 using System.IO;
+using CAN;
+using TestClass;
+using TestClass.SWS;
 
 namespace CAN
 {
@@ -59,6 +61,12 @@ namespace CAN
                     Console.WriteLine("Loading command file {0}", arguments.Get("-s").Next);
                 }
                 RunSimpleCommandList(arguments.Get("-c").Next, arguments.Get("-s").Next);
+            }
+            else if (arguments.Has("-t") && arguments.Has("-k"))
+            {
+                //check if config file exists
+                Key key = new Key();
+                key.Do();
             }
             else if (args.Count() == 0)
             {

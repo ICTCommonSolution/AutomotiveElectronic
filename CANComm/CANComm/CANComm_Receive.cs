@@ -442,6 +442,7 @@ namespace CAN
 					Thread.Sleep(5);
 				}
                 ClearBuffer(clearBufferBeforeRead);
+                Console.WriteLine("Press key+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
 				ReceiveThread.Resume();
 				while (ReceiveThread.ThreadState != ThreadState.Running)
 				{
@@ -509,8 +510,11 @@ namespace CAN
 					Thread.Sleep(5);
 				}
                 ClearBuffer(clearBufferBeforeRead);
+
+                Console.WriteLine("Press key-------------------------------------------------------------");
 				//start receiving
 				ReceiveThread.Resume();
+                Thread.Sleep(100);
 				while (ReceiveThread.ThreadState != ThreadState.Running)
 				{
 					Thread.Sleep(1);
@@ -519,9 +523,11 @@ namespace CAN
 				//Seek data
 				foreach(CAN_OBJ canObj in listReceivedFrame)
 				{
-					if(canObj.ID == canID)
+                    string strData = BitConverter.ToString(canObj.data).Replace("-", string.Empty);
+                    Console.WriteLine("foreach:{0:X}", strData);
+                    if (canObj.ID == canID)
 					{
-						string strData = BitConverter.ToString(canObj.data).Replace("-", string.Empty);
+                        Console.WriteLine("if:{0:X}", strData);
                         if (strData.IndexOf(data) >= 0)
                         {
                             return true;
@@ -544,13 +550,15 @@ namespace CAN
 					throw new Exception(string.Format("Failed at receive message method with message: {0}", ex.Message));
 				}
 			}
-			return true;
+			return false;
 		}
 		#endregion
 
 		private string FrameToString(CAN_OBJ canObj)
         {
-			return string.Format("{0:X},{2:X}", canObj.ID, BitConverter.ToString(canObj.data).Replace("-", string.Empty));
+            string str = BitConverter.ToString(canObj.data).Replace("-", string.Empty);
+
+            return string.Format("{0:X},{1:X}", canObj.ID, BitConverter.ToString(canObj.data).Replace("-", string.Empty));
 		}
 	}
 }
