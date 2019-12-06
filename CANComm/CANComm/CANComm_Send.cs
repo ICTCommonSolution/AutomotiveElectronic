@@ -79,7 +79,8 @@ namespace CAN
 		{
 			byte[] byteData = new byte[canObj.DataLen];
 			canObj.data.CopyTo(byteData, 0);
-		
+
+            Console.WriteLine();
 			return SendFrame(canObj, byteData);
 		}
 		public bool SendMessages(List<byte[]> DataList,
@@ -177,6 +178,8 @@ namespace CAN
                 iSizeOfObj = System.Runtime.InteropServices.Marshal.SizeOf(objMessage[0]);
                 lock (this)
                 {
+                    string strData = BitConverter.ToString(canOBJ.data).Replace("-", string.Empty);
+                    //Console.WriteLine("SendFrame: {0:X} : {1:X}", canOBJ.ID, strData);
                     if (ECANDLL.Transmit(Setting.DeviceType, Setting.DeviceID, Setting.Channel, objMessage, (ushort)uLen) != ECANStatus.STATUS_OK)
                     {
                         string strErrInfo = ReadError();

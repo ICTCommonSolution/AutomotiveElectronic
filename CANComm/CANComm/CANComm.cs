@@ -16,12 +16,14 @@ namespace CAN
 {
     public partial class CANComm
     {
-    	public bool Connected { get; private set; }
+        public int icount = 0;
+        public bool Connected { get; private set; }
         public CANSetting Setting;
         public Thread PeriodicMessageThread = null;
         public Thread ReceiveThread = null;
         private List<string[]> PeriodicCommands = null;
-        private List<CAN_OBJ> listReceivedFrame = null;
+        public List<CAN_OBJ> listReceivedFrame = null;
+        //private List<CAN_OBJ> listReceivedFrame = null;
         public bool EnablePeriodicMessageThread { get; set; }
         public bool EnableReceiveThread { get; set; }
 		public bool EnableClearBuffer{private get; set; }
@@ -38,134 +40,144 @@ namespace CAN
             Setting = new CANSetting(deviceType, deviceID, channel, accCode, accMask, filter, mode, baudRate);
         }
 
-        //    public void ThreadReceive(object obj)
-        //    {
-        //        string str = obj as string;
-        //        Console.WriteLine("[{0}] - [ThreadReceive] - Start", DateTime.Now.ToString("HH:mm:ss.ffff"));
-        //        if (listReceivedFrame == null)
-        //        {
-        //            Console.WriteLine("[{0}] - [ThreadReceive] - init listReceivedFrame", DateTime.Now.ToString("HH:mm:ss.ffff"));
-        //            listReceivedFrame = new List<CAN_OBJ>();
-        //        }
+        public void InitReceiveThread(bool StartThread, string Para = "")
+        {
+            EnableReceiveThread = true;
+            ReceiveThread = new Thread(new ParameterizedThreadStart(ThreadFunc_Receive));
+            ReceiveThread.IsBackground = false;
+            if (true == StartThread)
+            {
+                ReceiveThread.Start(Para);
+            }
+        }
 
-        //        int iThreadReceiveCount = 0;
-        //        while (EnableReceiveThread)
-        //        {
-        //            Console.WriteLine("[{0}] - [ThreadReceive] - whileloop EnableReceiveThread = true: {1}", DateTime.Now.ToString("HH:mm:ss.ffff"), iThreadReceiveCount);
-        //            try
-        //            {
-        //            	//Clear buffer if the global variable is changed to true out of the receiving thread.
-        //            	//Also clear received CAN list at the same time.
-        //	ClearBuffer(EnableClearBuffer);
+        public void StartReceiveThread(string Para)
+        {
+            if (ReceiveThread == null)
+            {
+                InitReceiveThread(true, Para);
+                return;
+            }
+            //reset enabler if thread is stopped
+            EnableReceiveThread = true;
+            if (ReceiveThread.ThreadState == ThreadState.Unstarted)
+            {
+                ReceiveThread.Start(Para);
+                return;
+            }
 
-        //                //ReceiveSingleMessage(out canObj, 5);
-        //                lock (listReceivedFrame)//lock is not verified
-        //                {
-        //                    Console.WriteLine("[{0}] - [ThreadReceive] - call ReadFrame", DateTime.Now.ToString("HH:mm:ss.ffff"));
-        //                    CAN_OBJ canObj = ReadFrame();
-        //                    if (canObj.DataLen > 0)
-        //                    {
-        //                        Console.WriteLine("[{0}] - [ThreadReceive] - add to listReceivedFrame", DateTime.Now.ToString("HH:mm:ss.ffff"));
-        //                        listReceivedFrame.Add(canObj);
-        //                        //debug purpose. To be deleted later
-        //                        Console.WriteLine("ReceiveThread:,[{0:X8}],[{1}]", canObj.ID, BitConverter.ToString(canObj.data).Replace("-", string.Empty));
-        //                    }
-        //                }
-        //            }
-        //            catch (Exception ex)
-        //            {
-        //                Console.WriteLine("[Err][ThreadReceive]:{0}", ex.Message);
-        //            }
+            if (ReceiveThread.ThreadState == ThreadState.WaitSleepJoin)
+            {
+                Console.WriteLine(string.Format("[StartReceiveThread]:Unsupported state:{0}", ReceiveThread.ThreadState));
+                while (ReceiveThread.ThreadState == ThreadState.WaitSleepJoin)
+                {
+                    Thread.Sleep(1);
+                }
+                return;
+            }
 
-        ////abort if global vairiable is turned off.
-        //         if (false == EnableReceiveThread)
-        //         {
-        //                Console.WriteLine("[{0}] - [ThreadReceive] - abort receivethread", DateTime.Now.ToString("HH:mm:ss.ffff"));
-        //                ReceiveThread.Abort();
-        //             while (ReceiveThread.ThreadState != ThreadState.Aborted)
-        //             {
-        //                 Thread.Sleep(10);
-        //             }
-        //                Console.WriteLine("[{0}] - [ThreadReceive] - receivethread aborted", DateTime.Now.ToString("HH:mm:ss.ffff"));
-        //            }
+            InitReceiveThread(true, Para);
+        }
+        public void StopReceiveThread()
+        {
+            if (ReceiveThread == null)
+            {
+                throw new Exception(string.Format("Thread is not initialized."));
+            }
+            EnableReceiveThread = false;
+        }
 
-        //            if (true == BufferEmpty())
-        //            {
-        //                Console.WriteLine("[{0}] - [ThreadReceive] - buffer empty", DateTime.Now.ToString("HH:mm:ss.ffff"));
-        //                Thread.Sleep(50);
-        //            }
-        //            iThreadReceiveCount++;
-        //        }
-        //    }
-        public void ThreadReceive(object obj)
+        public void InitPeriodicFrameThread(bool StartThread, string Para="")
+        {
+            EnablePeriodicMessageThread = true;
+            PeriodicMessageThread = new Thread(new ParameterizedThreadStart(ThreadFunc_PeriodicFrame));
+            PeriodicMessageThread.IsBackground = true;
+            if (true == StartThread)
+            {
+                PeriodicMessageThread.Start(Para);
+            }
+        }
+
+        public void StartPeroidicFrameThread(string Para)
+        {
+            if (PeriodicMessageThread == null)
+            {
+                InitPeriodicFrameThread(true, Para);
+                return;
+            }
+
+			//reset enabler if thread is stopped
+            EnablePeriodicMessageThread = true;
+            if (PeriodicMessageThread.ThreadState == (ThreadState.Unstarted|ThreadState.Background))
+            {
+                PeriodicMessageThread.Start(Para);
+                return;
+            }
+
+
+            if (PeriodicMessageThread.ThreadState == ThreadState.WaitSleepJoin)
+            {
+                Console.WriteLine(string.Format("[StartPeroidicFrameThread]:Unsupported state:{0}", PeriodicMessageThread.ThreadState));
+                while (PeriodicMessageThread.ThreadState == ThreadState.WaitSleepJoin)
+                {
+                    Thread.Sleep(1);
+                }
+                return;
+            }
+
+            InitPeriodicFrameThread(true, Para);
+        }
+
+        public void StopPeroidicFrameThread()
+        {
+            if (PeriodicMessageThread == null)
+            {
+                throw new Exception(string.Format("Thread is not initialized."));
+            }
+            EnablePeriodicMessageThread = false;
+        }
+
+        public void ThreadFunc_Receive(object obj)
         {
             string str = obj as string;
-            Console.WriteLine("[{0}] - [ThreadReceive] - Start", DateTime.Now.ToString("HH:mm:ss.ffff"));
+            Console.WriteLine("[{0}] - [ThreadFunc_Receive] - Start", DateTime.Now.ToString("HH:mm:ss.ffff"));
             
             if (listReceivedFrame == null)
             {
-                Console.WriteLine("[{0}] - [ThreadReceive] - init listReceivedFrame", DateTime.Now.ToString("HH:mm:ss.ffff"));
+                Console.WriteLine("[{0}] - [ThreadFunc_Receive] - init listReceivedFrame", DateTime.Now.ToString("HH:mm:ss.ffff"));
                 listReceivedFrame = new List<CAN_OBJ>();
             }
-            int iThreadReceiveCount = 0;
+            int iThreadFunc_ReceiveCount = 0;
             while (EnableReceiveThread)
             {
-                Console.WriteLine("[{0}] - [ThreadReceive] - whileloop EnableReceiveThread = true: {1}", DateTime.Now.ToString("HH:mm:ss.ffff"), iThreadReceiveCount);
                 try
                 {
-                    //Clear buffer if the global variable is changed to true out of the receiving thread.
-                    //Also clear received CAN list at the same time.
-                    //ClearBuffer(EnableClearBuffer);
-
-                    //ReceiveSingleMessage(out canObj, 5);
-                    lock (listReceivedFrame)//lock is not verified
+                    lock (listReceivedFrame)
                     {
-                        while (false == BufferEmpty())
+                        if(false == BufferEmpty())
                         {
-                            Console.WriteLine("[{0}] - [ThreadReceive] - not empty. to call ReadFrame", DateTime.Now.ToString("HH:mm:ss.ffff"));
                             CAN_OBJ canObj = ReadFrame();
                             if (canObj.DataLen > 0)
                             {
-                                Console.WriteLine("[{0}] - [ThreadReceive] - add to listReceivedFrame", DateTime.Now.ToString("HH:mm:ss.ffff"));
                                 listReceivedFrame.Add(canObj);
-                                //debug purpose. To be deleted later
-                                Console.WriteLine("ReceiveThread:,[{0:X8}],[{1}]", canObj.ID, BitConverter.ToString(canObj.data).Replace("-", string.Empty));
                             }
                         }
                     }
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine("[Err][ThreadReceive]:{0}", ex.Message);
+                    Console.WriteLine("[Err][ThreadFunc_Receive]:{0}", ex.Message);
                 }
-
-                //abort if global vairiable is turned off.
-                if (false == EnableReceiveThread)
-                {
-                    Console.WriteLine("[{0}] - [ThreadReceive] - abort receivethread", DateTime.Now.ToString("HH:mm:ss.ffff"));
-                    ReceiveThread.Abort();
-                    while (ReceiveThread.ThreadState != ThreadState.Aborted)
-                    {
-                        Thread.Sleep(10);
-                    }
-                    Console.WriteLine("[{0}] - [ThreadReceive] - receivethread aborted", DateTime.Now.ToString("HH:mm:ss.ffff"));
-                }
-
-                if (true == BufferEmpty())
-                {
-                    Console.WriteLine("[{0}] - [ThreadReceive] - buffer empty", DateTime.Now.ToString("HH:mm:ss.ffff"));
-                    Thread.Sleep(177);
-                }
-                iThreadReceiveCount++;
+                iThreadFunc_ReceiveCount++;
             }
         }
-        public void ThreadPeriodicMessagePara(object obj)
+        public void ThreadFunc_PeriodicFrame(object obj)
         {
             string str = obj as string;
-            Console.WriteLine("[{0}] - [ThreadPeriodicMessagePara] - start", DateTime.Now.ToString("HH:mm:ss.ffff"));
+            Console.WriteLine("[{0}] - [ThreadFunc_PeriodicFrame] - start", DateTime.Now.ToString("HH:mm:ss.ffff"));
             if (PeriodicCommands == null)
             {
-                Console.WriteLine("[{0}] - [ThreadPeriodicMessagePara] - command list is empty", DateTime.Now.ToString("HH:mm:ss.ffff"));
+                Console.WriteLine("[{0}] - [ThreadFunc_PeriodicFrame] - command list is empty", DateTime.Now.ToString("HH:mm:ss.ffff"));
                 Assembly assm = Assembly.GetExecutingAssembly();
                 string strAlllines = (string)Resource.ResourceManager.GetObject("PeriodicSequence");
                 PeriodicCommands = LoadCommandList(strAlllines);
@@ -173,24 +185,20 @@ namespace CAN
 
 			try
 			{
-	            while (true == EnablePeriodicMessageThread)
-	            {
-	                foreach (string[] command in PeriodicCommands)
-	                {
-                        Console.WriteLine("[{0}] - [ThreadPeriodicMessagePara] - send frame and sleep", DateTime.Now.ToString("HH:mm:ss.ffff"));
-                        SendMessage(command[0], command[1]);
-	                    Thread.Sleep(25);
-	                }
-
-	                if (false == EnablePeriodicMessageThread)
-	                {
-	                    PeriodicMessageThread.Abort();
-	                    while (PeriodicMessageThread.ThreadState != ThreadState.Aborted)
-	                    {
-	                        Thread.Sleep(100);
-	                    }
-	                }
-	            }
+                int count = PeriodicCommands.Count;
+                for (int i = 0; i < count && true == EnablePeriodicMessageThread; i++)
+                {
+                    string[] command = PeriodicCommands[i];
+                    //Console.WriteLine("[{0}] - [SendStamp] - {1}", DateTime.Now.ToString("HH:mm:ss.ffff"), icount);
+                    SendMessage(command[0], command[1]);
+                    if (icount < 100)
+                        Thread.Sleep(10);
+                    else
+                        Thread.Sleep(25);
+                    icount++;
+                    if (i == count-1)
+                        i = -1;
+                }
 			}
 			catch (Exception ex)
 			{
@@ -235,27 +243,29 @@ namespace CAN
             return listCommand;
         }
 
-        public bool OpenDevice(UInt16 devID, UInt16 channel, out string messageOfFalse, int waitAfterOpen, bool startPeriodicMessage, bool enableReceive)
+        public bool OpenDevice(UInt16 devID, UInt16 channel, out string messageOfFalse, int waitAfterOpen, bool startPeriodicMessage=true, bool enableReceive=true)
         {
             if (false == OpenDevice(devID, channel, out messageOfFalse))
             {
                 return false;
             }
 
+            //periodic background thread to enable DUT
             Thread.Sleep(waitAfterOpen);
+            EnablePeriodicMessageThread = startPeriodicMessage;
+            PeriodicMessageThread = new Thread(new ParameterizedThreadStart(ThreadFunc_PeriodicFrame));
+            PeriodicMessageThread.IsBackground = true;
             if (true == startPeriodicMessage)
             {
-                EnablePeriodicMessageThread = startPeriodicMessage;
-                PeriodicMessageThread = new Thread(new ParameterizedThreadStart(ThreadPeriodicMessagePara));
-                PeriodicMessageThread.IsBackground = true;
                 PeriodicMessageThread.Start("hello");
-           }
+            }
+
+            //Receiving thread
+            EnableReceiveThread = enableReceive;
+            ReceiveThread = new Thread(new ParameterizedThreadStart(ThreadFunc_Receive));
+            ReceiveThread.IsBackground = false;
             if (true == enableReceive)
             {
-                EnableReceiveThread = enableReceive;
-
-                ReceiveThread = new Thread(new ParameterizedThreadStart(ThreadReceive));
-                ReceiveThread.IsBackground = false;
                 ReceiveThread.Start("World");
             }
             return true;
@@ -291,7 +301,7 @@ namespace CAN
 			if (true == startPeriodicMessage)
 			{
                 EnablePeriodicMessageThread = startPeriodicMessage;
-				PeriodicMessageThread = new Thread(new ParameterizedThreadStart(ThreadPeriodicMessagePara));
+				PeriodicMessageThread = new Thread(new ParameterizedThreadStart(ThreadFunc_PeriodicFrame));
 				PeriodicMessageThread.IsBackground = true;
 				PeriodicMessageThread.Start("hello");
 			}
@@ -299,7 +309,7 @@ namespace CAN
 			{
                 EnableReceiveThread = enableReceive;
 
-				ReceiveThread = new Thread(new ParameterizedThreadStart(ThreadReceive));
+				ReceiveThread = new Thread(new ParameterizedThreadStart(ThreadFunc_Receive));
 				ReceiveThread.IsBackground = false;
 				ReceiveThread.Start("World");
 			}
@@ -349,12 +359,20 @@ namespace CAN
             Console.WriteLine("[{0}] - [OpenDevice] - connected", DateTime.Now.ToString("HH:mm:ss.ffff"));
             Connected = true;
             messageOfFalse = string.Empty;
+            if (ReceiveThread != null)
+            {
+                Console.WriteLine("[{0}] - [ThreadFunc_Receive-State] - {1}", DateTime.Now.ToString("HH:mm:ss.ffff"), ReceiveThread.ThreadState);
+            }
             return true;
         }
 
 		public bool CloseDevice()
         {
-        	if(true == Connected)
+            if (ReceiveThread != null)
+            {
+                Console.WriteLine("[{0}] - [ThreadFunc_Receive-State] - {1}", DateTime.Now.ToString("HH:mm:ss.ffff"), ReceiveThread.ThreadState);
+            }
+            if (true == Connected)
 			{
                 Console.WriteLine("[{0}] - [CloseDevice] - Start", DateTime.Now.ToString("HH:mm:ss.ffff"));
                 //Abort period message thread before close
@@ -525,6 +543,19 @@ namespace CAN
             return false;
         }
         #endregion
+
+		public int GetBitValue(byte[] Data, int StartBit, int length)
+        {
+			uint uiMask = (uint)Math.Pow(2, length) - 1;
+
+			byte[] value = new byte[8];
+			Array.Reverse(Data); // otherwise you will have a1612240fff result
+			Array.Copy(Data, value, 6);
+			ulong ulData = BitConverter.ToUInt64(value, 0);
+			Console.WriteLine("{0:x}", result);
+
+			
+		}
     }
 
     public enum CANBaudRate:UInt16

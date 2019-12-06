@@ -364,252 +364,147 @@ namespace CAN
 			return true;
 		}
 
-        /// <summary>
-        /// Get data from specified CAN ID and the frames from other ID will be ignored.
-        /// </summary>
-        /// <param name="DataList">return the received ID and data in one string, separated by ','</param>
-        /// <param name="canID">the desired CAN ID</param>
-        /// <param name="duration">read data within specified duration, unit in ms</param>
-        /// <param name="timeOut">The time out of receiving frames</param>
-        /// <param name="clearBufferBeforeRead">whether clear buffer of CAN receiver and received global variable</param>
-        /// <returns>read frames successfully or not</returns>
-        public bool ClearAndReceiveMessagesByID(out List<string> DataList, uint canID, int duration, int timeOut, bool clearBufferBeforeRead)
+		public bool FetchFrames(out List<CAN_OBJ> CanObjList, int TimeOut)
+        {
+        	try
+        	{
+	        	//if null, exception
+				if(ReceiveThread == null)
+				{
+					throw new Exception(string.Format("Receiving thread is not initialized."));
+				}
+				//if not running, start
+				if(ReceiveThread.ThreadState != ThreadState.Running && ReceiveThread.ThreadState != ThreadState.WaitSleepJoin)
+				{
+					StartReceiveThread("World");
+				}
+				Thread.Sleep(TimeOut);
+
+				EnableReceiveThread = false;
+				//CanObjList = new List<CAN_OBJ>();
+                CanObjList =  listReceivedFrame.ToList();
+				//listReceivedFrame.ForEach(i => CanObjList.Add(i));
+
+				//debugging info
+				Console.WriteLine("[{0}]-[FetchFrames] - Can received: {1} frames", DateTime.Now.ToString("HH:mm:ss.ffff"), listReceivedFrame.Count);
+				Console.WriteLine("[{0}]-[FetchFrames] - Method received: {1} frames", DateTime.Now.ToString("HH:mm:ss.ffff"), CanObjList.Count);
+				Console.WriteLine("[{0}]-[FetchFrames] - BufferEmpty = {1}", DateTime.Now.ToString("HH:mm:ss.ffff"), BufferEmpty());
+				Console.WriteLine("[{0}]-[FetchFrames] - ReceivedThread state = {1}", DateTime.Now.ToString("HH:mm:ss.ffff"), ReceiveThread.ThreadState);
+			}
+			catch(Exception ex)
+			{
+				throw new Exception(string.Format("[FetchFrames]:{0}", ex.Message));
+			}
+			return true;
+		}
+
+		public bool FetchDataByID(out List<string> DataList, uint ID, int TimeOut)
 		{
-			DataList = new List<string>();
-			CAN_OBJ objFrame = new CAN_OBJ();
+			Dictionary<uint, List<string>> dictData = null;
+			try
+			{
+				if(false == FetchCategorizedData(out dictData, TimeOut))
+				{
+                    DataList = new List<string>();
+					return false;
+				}
+
+				if(false == dictData.ContainsKey(ID))
+				{
+                    DataList = new List<string>();
+                    return false;
+				}
+
+				DataList = dictData[ID].ToList();
+
+				//debugging info
+				Console.WriteLine("[{0}]-[FetchDataByID] - Method received: {1} frames", DateTime.Now.ToString("HH:mm:ss.ffff"), DataList.Count);
+			}
+			catch(Exception ex)
+			{
+				throw new Exception(string.Format("[FetchDataByID]:{0}", ex.Message));
+			}
+			return true;
+		}
+		public bool FetchCategorizedData(out Dictionary<uint, List<string>> DataList, int TimeOut)
+        {
+            DataList = new Dictionary<uint, List<string>>();
+            List<CAN_OBJ> canObjList = null;
+			try
+        	{
+        		FetchFrames(out canObjList, TimeOut);
+				if(canObjList.Count <= 0)
+				{
+					return false;
+				}
+
+				foreach(CAN_OBJ canObj in canObjList)
+				{
+					//blank space between bytes
+					string strData = string.Format("{0:X}", BitConverter.ToString(canObj.data).Replace("-", " "));
+                    if (DataList.ContainsKey(canObj.ID))
+                    {
+                        DataList[canObj.ID].Add(strData);
+                    }
+                    else
+                    {
+                        List<string> listNew = new List<string>();
+                        listNew.Add(strData);
+                        DataList.Add(canObj.ID, listNew);
+                    }
+				}
+			}
+			catch(Exception ex)
+			{
+				throw new Exception(string.Format("[FetchCategorizedData:Dict]:{0}", ex.Message));
+			}
+			//debugging info
+			Console.WriteLine("[{0}]-[FetchCategorizedData] - Frames from {1} IDs", DateTime.Now.ToString("HH:mm:ss.ffff"), DataList.Count);
+			return true;
+    	}
+
+		public bool FindExpectedData(uint ID, string Data, int TimeOut)
+		{
+			Dictionary<uint, List<string>> dictData = null;
 
 			try
 			{
-                ClearBuffer(clearBufferBeforeRead);
-				DateTime dtStart = DateTime.Now;
-				while (true)
+				if(false == FetchCategorizedData(out dictData, TimeOut))
 				{
-					if (false == BufferEmpty()) //unread frame in instrument
+					return false;
+				}
+
+				if(dictData.ContainsKey(ID))
+				{
+					List<string> listValues = dictData[ID];
+					foreach(string frameData in listValues)
 					{
-						objFrame = ReadFrame();
-						if (objFrame.DataLen > 0 && objFrame.ID == canID)
+						if(frameData.IndexOf(Data) != -1)
 						{
-							DataList.Add(FrameToString(objFrame));
+							return true;//found
 						}
-					}
-					else if ((DateTime.Now - dtStart).TotalMilliseconds > timeOut && (DateTime.Now - dtStart).TotalMilliseconds > duration)
-					{
-						break;
-					}
-					else
-					{
-						Thread.Sleep(Setting.MaxInterval);
-						if (true == BufferEmpty()) //unread frame in instrument
+						else
 						{
-							break;//time exceeds the max interval, don't wait.
+							return false;// not found
 						}
 					}
 				}
-			}
-			catch (Exception ex)
-			{
-				if (true == ex.Message.StartsWith("Failed at CAN receive: "))
-				{
-					throw new Exception(ex.Message);
-				}
 				else
 				{
-					throw new Exception(string.Format("Failed at receive message method with message: {0}", ex.Message));
+					return false;// not found
 				}
 			}
-			return true;
-		}
-        #endregion
-
-		#region Fetch message(s) from received global variable
-        /// <summary>
-        /// Get data from received frames by specified CAN ID and the frames from other ID will be ignored.
-        /// </summary>
-        /// <param name="DataList">return the received ID and data in one string, separated by ','</param>
-        /// <param name="canID">the desired CAN ID</param>
-        /// <param name="duration">read data within specified duration, unit in ms</param>
-        /// <param name="clearBufferBeforeRead">whether clear buffer of CAN receiver and received global variable</param>
-        /// <returns>read frames successfully or not</returns>
-        public bool ClearAndFetchMessagesByID(out List<string> DataList, uint canID, int duration, bool clearBufferBeforeRead)
-		{
-			DataList = new List<string>();
-			CAN_OBJ objFrame = new CAN_OBJ();
-
-            try
-            {
-                ReceiveThread.Suspend();
-                while (ReceiveThread.ThreadState != ThreadState.Suspended)
-                {
-                    Thread.Sleep(5);
-                }
-                ClearBuffer(clearBufferBeforeRead);
-                Console.WriteLine("Press key+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
-                ReceiveThread.Resume();
-                while (ReceiveThread.ThreadState != ThreadState.Running)
-                {
-                    Thread.Sleep(1);
-                }
-
-                //receiving
-                Thread.Sleep(duration);
-
-                //Stop receiving before fetch
-                ReceiveThread.Suspend();
-                while (ReceiveThread.ThreadState != ThreadState.Suspended)
-                {
-                    Thread.Sleep(5);
-                }
-                lock (listReceivedFrame)
-                {
-                    for (int i = 0; i < listReceivedFrame.Count; i++)
-                    {
-                        CAN_OBJ canObj = listReceivedFrame[i];
-                        if (canObj.ID == canID)
-                        {
-                            DataList.Add(FrameToString(canObj));
-                        }
-                    }
-                }
-				//resume receiving thread
-				ReceiveThread.Resume();
-				while (ReceiveThread.ThreadState != ThreadState.Running)
-				{
-					Thread.Sleep(1);
-				}
-			}
-			catch (Exception ex)
+			catch(Exception ex)
 			{
-				if (true == ex.Message.StartsWith("Failed at CAN receive: "))
-				{
-					throw new Exception(ex.Message);
-				}
-				else
-				{
-					throw new Exception(string.Format("Failed at receive message method with message: {0}", ex.Message));
-				}
+				throw new Exception(string.Format("[FindExpectedData:Dict]:{0}", ex.Message));
 			}
-			return true;
+			return false;
 		}
 
-        /// <summary>
-        /// Get data from received frames by specified CAN ID and the frames from other ID will be ignored.
-        /// </summary>
-        /// <param name="DataList">return the received ID and data in one string, separated by ','</param>
-        /// <param name="canID">the desired CAN ID</param>
-        /// <param name="duration">read data within specified duration, unit in ms</param>
-        /// <param name="clearBufferBeforeRead">whether clear buffer of CAN receiver and received global variable</param>
-        /// <returns>read frames successfully or not</returns>
-        public bool ClearAndSeekMessages(uint canID, string data, int timeOut, bool clearBufferBeforeRead = true)
-		{
-			CAN_OBJ objFrame = new CAN_OBJ();
-            bool bFound = false;
-
-			data = data.Replace("-", string.Empty);
-            Console.WriteLine("[{0}] - [ClearAndSeekMessages] - Start", DateTime.Now.ToString("HH:mm:ss.ffff"));
-            Console.WriteLine("[{0}] - [ClearAndSeekMessages] - canID={1};data={2};timeout={3}", DateTime.Now.ToString("HH:mm:ss.ffff"), canID, data, timeOut);
-
-            try
-            {
-                Console.WriteLine("[{0}] - [ClearAndSeekMessages] - receivethread state = {1}", DateTime.Now.ToString("HH:mm:ss.ffff"), ReceiveThread.ThreadState.ToString());
-                //if (ReceiveThread.ThreadState != ThreadState.Running)
-                //{
-                //    while (ReceiveThread.ThreadState == ThreadState.WaitSleepJoin)
-                //    {
-                //        Thread.Sleep(5);
-                //    }
-
-                //    //ReceiveThread.Start("ClearAndSeekMessages");
-                //}
-                ReceiveThread.Suspend();
-                while (ReceiveThread.ThreadState != ThreadState.Suspended)
-				{
-					Thread.Sleep(5);
-				}
-                Console.WriteLine("[{0}] - [ClearAndSeekMessages] - 1st clear buffer", DateTime.Now.ToString("HH:mm:ss.ffff"));
-                ClearBuffer(clearBufferBeforeRead);
-
-                Console.WriteLine("Press key-------------------------------------------------------------");
-                //start receiving
-                Console.WriteLine("[{0}] - [ClearAndSeekMessages] - 1st Resume", DateTime.Now.ToString("HH:mm:ss.ffff"));
-                ReceiveThread.Resume();
-                Thread.Sleep(100);
-                while (ReceiveThread.ThreadState != ThreadState.Running)
-				{
-					Thread.Sleep(1);
-				}
-
-                DateTime dtStart = DateTime.Now;
-                int iDebugCount = 0;
-                //Seek data
-                while (bFound == false && (DateTime.Now - dtStart).TotalMilliseconds < timeOut)
-                {
-                    iDebugCount++;
-                    Console.WriteLine("[{0}] - [ClearAndSeekMessages] - while loop:{1}", DateTime.Now.ToString("HH:mm:ss.ffff"), iDebugCount);
-                    lock (listReceivedFrame)
-                    {
-                        if (listReceivedFrame.Count > 0)
-                        {
-                            foreach (CAN_OBJ canObj in listReceivedFrame)
-                            {
-                                iDebugCount++;
-                                Console.WriteLine("[{0}] - [ClearAndSeekMessages] - while loop:{1}", DateTime.Now.ToString("HH:mm:ss.ffff"), iDebugCount);
-                                string strData = BitConverter.ToString(canObj.data).Replace("-", string.Empty);
-                                Console.WriteLine("foreach: {0:X} : {1:X}", canObj.ID, strData);
-                                if (canObj.ID == canID)
-                                {
-                                    Console.WriteLine("if:{0:X}", strData);
-                                    if (strData.IndexOf(data) >= 0)
-                                    {
-                                        Console.WriteLine("[{0}] - [ClearAndSeekMessages] - Found", DateTime.Now.ToString("HH:mm:ss.ffff"));
-                                        bFound = true;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            Console.WriteLine("[{0}] - [ClearAndSeekMessages] - listReceivedFrame is empty", DateTime.Now.ToString("HH:mm:ss.ffff"));
-                            Thread.Sleep(10);
-                        }
-                    }
-                    Console.WriteLine("[{0}] - [ClearAndSeekMessages] - SpanTime: {1}ms", DateTime.Now.ToString("HH:mm:ss.ffff"), (DateTime.Now - dtStart).TotalMilliseconds);
-                }
-                if (bFound == false && (DateTime.Now - dtStart).TotalMilliseconds > timeOut)
-                {
-                    Console.WriteLine("[{0}] - [ClearAndSeekMessages] - timeout", DateTime.Now.ToString("HH:mm:ss.ffff"));
-                }
-                Console.WriteLine("[{0}] - [ClearAndSeekMessages] - 2nd clearbuffer", DateTime.Now.ToString("HH:mm:ss.ffff"));
-                ClearBuffer(clearBufferBeforeRead);
-				//while (ReceiveThread.ThreadState != ThreadState.Running)
-				//{
-                //    Console.WriteLine("[{0}] - [ClearAndSeekMessages] - receivethread is not running. to resume", DateTime.Now.ToString("HH:mm:ss.ffff"));
-                    Console.WriteLine("[{0}] - [ClearAndSeekMessages] - receivethread state = {1}", DateTime.Now.ToString("HH:mm:ss.ffff"), ReceiveThread.ThreadState.ToString());
-                //    ReceiveThread.Resume();
-				//	Thread.Sleep(1);
-				//}
-			}
-			catch (Exception ex)
-			{
-				if (true == ex.Message.StartsWith("Failed at CAN receive: "))
-				{
-					throw new Exception(ex.Message);
-				}
-				else
-				{
-					throw new Exception(string.Format("Failed at receive message method with message: {0}", ex.Message));
-				}
-			}
-            Console.WriteLine("[{0}] - [ClearAndSeekMessages] - End", DateTime.Now.ToString("HH:mm:ss.ffff"));
-            return bFound;
-		}
-		#endregion
-
-		private string FrameToString(CAN_OBJ canObj)
+		public static string FrameToString(CAN_OBJ canObj)
         {
-            string str = BitConverter.ToString(canObj.data).Replace("-", string.Empty);
-
             return string.Format("{0:X},{1:X}", canObj.ID, BitConverter.ToString(canObj.data).Replace("-", string.Empty));
 		}
 	}
+    #endregion
 }

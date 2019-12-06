@@ -1,10 +1,17 @@
 {
   "SWS":
   {
-	"Key":
-	  {
-		"WaitAfterOpen": 1000,
-		"ReadTimeOut": 100000
-	  }
+    "Key": {
+      "WaitAfterOpen": 1000,
+      "ReadTimeOut": 10000
+    },
+    "KeyResponse": {
+      "WaitAfterOpen": 500,
+      "Duration": 50000
+    },
+    "Vector": {
+      "WaitAfterOpen": 500,
+      "ListFile": "periodic"
+    }
   }
 }

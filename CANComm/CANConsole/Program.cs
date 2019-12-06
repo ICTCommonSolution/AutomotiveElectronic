@@ -65,7 +65,7 @@ namespace CAN
             else if (arguments.Has("-t") && arguments.Has("-k"))
             {
                 //check if config file exists
-                Key key = new Key();
+                Press key = new Press();
                 key.Do();
             }
             else if (args.Count() == 0)
