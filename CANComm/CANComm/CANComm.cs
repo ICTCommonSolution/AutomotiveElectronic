@@ -243,34 +243,6 @@ namespace CAN
             return listCommand;
         }
 
-        public bool OpenDevice(UInt16 devID, UInt16 channel, out string messageOfFalse, int waitAfterOpen, bool startPeriodicMessage=true, bool enableReceive=true)
-        {
-            if (false == OpenDevice(devID, channel, out messageOfFalse))
-            {
-                return false;
-            }
-
-            //periodic background thread to enable DUT
-            Thread.Sleep(waitAfterOpen);
-            EnablePeriodicMessageThread = startPeriodicMessage;
-            PeriodicMessageThread = new Thread(new ParameterizedThreadStart(ThreadFunc_PeriodicFrame));
-            PeriodicMessageThread.IsBackground = true;
-            if (true == startPeriodicMessage)
-            {
-                PeriodicMessageThread.Start("hello");
-            }
-
-            //Receiving thread
-            EnableReceiveThread = enableReceive;
-            ReceiveThread = new Thread(new ParameterizedThreadStart(ThreadFunc_Receive));
-            ReceiveThread.IsBackground = false;
-            if (true == enableReceive)
-            {
-                ReceiveThread.Start("World");
-            }
-            return true;
-        }
-
         public bool OpenDevice(UInt16 devID, UInt16 channel, out string messageOfFalse)
         {
             try
@@ -447,26 +419,32 @@ namespace CAN
             return 0xFFFF;
         }
 
-        public ulong GetBitsFromFrame(CAN_OBJ canOBJ, uint startBit, uint length)
+        public static ulong GetBitsFromFrame(CAN_OBJ canOBJ, uint startBit, uint length)
         {
             byte[] byteData = new byte[canOBJ.DataLen];
 
             //get all data from frame
             canOBJ.data.CopyTo(byteData, 0);
 
-            //get value
-            uint uiMask = (uint)(Math.Pow(2.0, (double)length) - 1);
-            int iMoveLen = sizeof(byte) * 8 * byteData.Length - (int)(startBit + length - 1);//the length of left shift
-            ulong ulInput = 0; //convert byte[] to ulong
-            for (int i = 0; i < byteData.Length; i++)
-            {
-                ulInput = ulInput + (uint)byteData[i] << (8 * (byteData.Length - i - 1));
-            }
-            ulong ulValue = (ulInput >> iMoveLen) & uiMask;
-
-            return 0xFFFF;
+			return GetBitsFromFrame(byteData, startBit, length);
         }
 
+        public static ulong GetBitsFromFrame(byte[] byteArray, uint startBit, uint length)
+        {
+            //get useful byte[]
+            uint uiUsefullenth = (uint)Math.Floor(((float)startBit+(float)length) / 8) + 1;
+            
+            //convert to string
+            string strBinary = string.Empty;
+            for (int i = 0; i < uiUsefullenth; i++)
+            {
+                strBinary = string.Format("{0}{1}", strBinary, Convert.ToString(byteArray[i], 2).PadLeft(8, '0'));
+            }
+            string strValue = strBinary.Substring((int)startBit, (int)length);
+            ulong ulValue = Convert.ToUInt64(strValue, 2);
+
+            return ulValue;
+        }
 		#region Error handling
         private string ReadError()
         {
@@ -543,19 +521,6 @@ namespace CAN
             return false;
         }
         #endregion
-
-		public int GetBitValue(byte[] Data, int StartBit, int length)
-        {
-			uint uiMask = (uint)Math.Pow(2, length) - 1;
-
-			byte[] value = new byte[8];
-			Array.Reverse(Data); // otherwise you will have a1612240fff result
-			Array.Copy(Data, value, 6);
-			ulong ulData = BitConverter.ToUInt64(value, 0);
-			Console.WriteLine("{0:x}", result);
-
-			
-		}
     }
 
     public enum CANBaudRate:UInt16

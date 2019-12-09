@@ -381,7 +381,7 @@ namespace CAN
 				Thread.Sleep(TimeOut);
 
 				EnableReceiveThread = false;
-				//CanObjList = new List<CAN_OBJ>();
+                CanObjList = new List<CAN_OBJ>();
                 CanObjList =  listReceivedFrame.ToList();
 				//listReceivedFrame.ForEach(i => CanObjList.Add(i));
 
@@ -398,20 +398,20 @@ namespace CAN
 			return true;
 		}
 
-		public bool FetchDataByID(out List<string> DataList, uint ID, int TimeOut)
+		public bool FetchDataByID(out List<byte[]> DataList, uint ID, int TimeOut)
 		{
-			Dictionary<uint, List<string>> dictData = null;
+			Dictionary<uint, List<byte[]>> dictData = null;
 			try
 			{
 				if(false == FetchCategorizedData(out dictData, TimeOut))
 				{
-                    DataList = new List<string>();
+                    DataList = new List<byte[]>();
 					return false;
 				}
 
 				if(false == dictData.ContainsKey(ID))
 				{
-                    DataList = new List<string>();
+                    DataList = new List<byte[]>();
                     return false;
 				}
 
@@ -426,9 +426,9 @@ namespace CAN
 			}
 			return true;
 		}
-		public bool FetchCategorizedData(out Dictionary<uint, List<string>> DataList, int TimeOut)
+		public bool FetchCategorizedData(out Dictionary<uint, List<byte[]>> DataList, int TimeOut)
         {
-            DataList = new Dictionary<uint, List<string>>();
+            DataList = new Dictionary<uint, List<byte[]>>();
             List<CAN_OBJ> canObjList = null;
 			try
         	{
@@ -441,15 +441,15 @@ namespace CAN
 				foreach(CAN_OBJ canObj in canObjList)
 				{
 					//blank space between bytes
-					string strData = string.Format("{0:X}", BitConverter.ToString(canObj.data).Replace("-", " "));
+					//string strData = string.Format("{0:X}", BitConverter.ToString(canObj.data).Replace("-", " "));
                     if (DataList.ContainsKey(canObj.ID))
                     {
-                        DataList[canObj.ID].Add(strData);
+                        DataList[canObj.ID].Add(canObj.data);
                     }
                     else
                     {
-                        List<string> listNew = new List<string>();
-                        listNew.Add(strData);
+                        List<byte[]> listNew = new List<byte[]>();
+                        listNew.Add(canObj.data);
                         DataList.Add(canObj.ID, listNew);
                     }
 				}
@@ -460,12 +460,14 @@ namespace CAN
 			}
 			//debugging info
 			Console.WriteLine("[{0}]-[FetchCategorizedData] - Frames from {1} IDs", DateTime.Now.ToString("HH:mm:ss.ffff"), DataList.Count);
+            //Console.WriteLine("[{0}]-[FetchCategorizedData] - Clearbuffer and receivebuffer", DateTime.Now.ToString("HH:mm:ss.ffff"));
+            //ClearBuffer(true);
 			return true;
     	}
 
 		public bool FindExpectedData(uint ID, string Data, int TimeOut)
 		{
-			Dictionary<uint, List<string>> dictData = null;
+			Dictionary<uint, List<byte[]>> dictData = null;
 
 			try
 			{
@@ -476,10 +478,13 @@ namespace CAN
 
 				if(dictData.ContainsKey(ID))
 				{
-					List<string> listValues = dictData[ID];
-					foreach(string frameData in listValues)
+					List<byte[]> listValues = dictData[ID];
+					foreach(byte[] frameData in listValues)
 					{
-						if(frameData.IndexOf(Data) != -1)
+						//blank space between bytes
+						string strFrameData = string.Format("{0:X}", BitConverter.ToString(frameData).Replace("-", " "));
+
+						if(strFrameData.IndexOf(Data) != -1)
 						{
 							return true;//found
 						}

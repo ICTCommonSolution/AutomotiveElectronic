@@ -10,7 +10,7 @@ using System.Reflection;
 
 namespace TestClass.SWS
 {
-    public class Press : TestClassBase
+    public class PressAll : TestClassBase
     {
         private CANComm canTalk = null;
         private string settingFile = @"testinputsample.json";
@@ -18,12 +18,15 @@ namespace TestClass.SWS
         int iWaitBeforeFetch = 5000;
         int iTimeout = 2500;
 
-        public Press()
+        public PressAll()
         {//do nothing
         }
 
         public int Do()
         {
+            OpenDevice();
+            StartPeriodicFrameThread();
+
             Console.WriteLine("[{0}] - [{1}.Do] - Start", DateTime.Now.ToString("HH:mm:ss.ffff"), this.GetType().Name);
             //get input
             base.GetInput(settingFile, Assembly.GetExecutingAssembly().GetName().Name, this.GetType().Name, "WaitAfterOpen", ref iWaitAfterOpen);
@@ -81,9 +84,6 @@ namespace TestClass.SWS
 
             canTalk.EnablePeriodicMessageThread = false;
 
-            CloseDevice();
-
-
             //foreach (byte[] data in listData)
             //{
             //    Console.WriteLine(string.Format("{0:X}:{1:X}", 0x12B, BitConverter.ToString(data).Replace("-", " ")));
@@ -102,7 +102,7 @@ namespace TestClass.SWS
         {
             //test in this period
             Thread.Sleep(waitBeforeFetch);
-            canTalk.EnablePeriodicMessageThread = false;
+            //canTalk.EnablePeriodicMessageThread = false;
 
             List<byte[]> listByteData = new List<byte[]>();
             if (false == canTalk.FetchDataByID(out listByteData, ID, timeOut))
@@ -122,14 +122,21 @@ namespace TestClass.SWS
         private bool Key_ByteCheck(string keyName, uint ID, string[] expectedData,int waitBeforeFetch, int timeOut)
         {
             bool bStatus = false;
-            OpenDevice();
-            StartThreads();
+
+            //Console.WriteLine("[{0}]-[{1}.Key_ByteCheck] - Clearbuffer and receivebuffer", DateTime.Now.ToString("HH:mm:ss.ffff"), this.GetType().Name);
+            //canTalk.ClearBuffer(true);
+            StartReceiveThread();
+
             Console.WriteLine("");
             Console.WriteLine(string.Format("Please {0} key after lights on", keyName));
             Console.WriteLine("");
 
             List<string> listResponse = FetchData(ID, waitBeforeFetch, timeOut);
 
+            if (listResponse == null || listResponse.Count <= 0)
+            {
+                return false;                
+            }
             foreach (string strExpected in expectedData)
             {
                 foreach (string strResponse in listResponse)
@@ -143,7 +150,6 @@ namespace TestClass.SWS
                 if(bStatus)
                     break;
             }
-            CloseDevice();
 
             if (true == bStatus)
             {
@@ -167,11 +173,14 @@ namespace TestClass.SWS
             bool status = false;
             List<byte[]> listData = null;
 
-            OpenDevice();
-            StartThreads();
+            //Console.WriteLine("[{0}]-[{1}.Key_BitsCheck] - Clearbuffer and receivebuffer", DateTime.Now.ToString("HH:mm:ss.ffff"), this.GetType().Name);
+            //canTalk.ClearBuffer(true);
+            StartReceiveThread();
+
             Console.WriteLine("");
             Console.WriteLine("Please {0} key after lights on", keyName);
             Console.WriteLine("");
+
             Thread.Sleep(waitBeforeFetch);
             if (false == canTalk.FetchDataByID(out listData, ID, timeOut))
             {
@@ -188,7 +197,6 @@ namespace TestClass.SWS
                     }
                 }
             }
-            CloseDevice();
 
             if(true == status)
             {
@@ -236,6 +244,28 @@ namespace TestClass.SWS
             //start thread
             Console.WriteLine("[{0}] - [{1}.StartThreads] - send start", DateTime.Now.ToString("HH:mm:ss.ffff"), this.ToString());
             canTalk.StartPeroidicFrameThread("Hello");
+            canTalk.StartReceiveThread("World");
+        }
+
+        private void StartPeriodicFrameThread()
+        {
+            //Init threads
+            canTalk.InitPeriodicFrameThread(false);
+
+            //start thread
+            Console.WriteLine("[{0}] - [{1}.StartPeriodicFrameThread] - send start", DateTime.Now.ToString("HH:mm:ss.ffff"), this.ToString());
+            canTalk.StartPeroidicFrameThread("Hello");
+        }
+        private void StartReceiveThread()
+        {
+            //Init threads
+            canTalk.InitReceiveThread(false);
+
+            Console.WriteLine("[{0}]-[{1}.StartReceiveThread] - Clearbuffer and receivebuffer", DateTime.Now.ToString("HH:mm:ss.ffff"), this.GetType().Name);
+            canTalk.ClearBuffer(true);
+
+            //start thread
+            Console.WriteLine("[{0}] - [{1}.StartReceiveThread] - send start", DateTime.Now.ToString("HH:mm:ss.ffff"), this.ToString());
             canTalk.StartReceiveThread("World");
         }
     }
