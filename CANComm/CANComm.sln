@@ -18,6 +18,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SWS", "SWS.Key\SWS.csproj",
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestClassBase", "..\..\Nile\TestClassBase\TestClassBase\TestClassBase\TestClassBase.csproj", "{FECCFC73-D160-47AA-8A39-59CD1CC9261B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Nile.Log", "..\..\Nile\Nile.Log\Nile.Log.csproj", "{3F0DB90C-CCA4-49C8-B7ED-CF8C68D65093}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -40,6 +42,10 @@ Global
 		{FECCFC73-D160-47AA-8A39-59CD1CC9261B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FECCFC73-D160-47AA-8A39-59CD1CC9261B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FECCFC73-D160-47AA-8A39-59CD1CC9261B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3F0DB90C-CCA4-49C8-B7ED-CF8C68D65093}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3F0DB90C-CCA4-49C8-B7ED-CF8C68D65093}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3F0DB90C-CCA4-49C8-B7ED-CF8C68D65093}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3F0DB90C-CCA4-49C8-B7ED-CF8C68D65093}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

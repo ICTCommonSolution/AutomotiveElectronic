@@ -35,9 +35,9 @@ namespace CAN
     	{
             Setting = new CANSetting(settingFile);
         }
-        public CANComm(UInt16 deviceType, UInt16 deviceID, UInt16 channel, UInt16 accCode, UInt32 accMask, byte filter, byte mode, string baudRate)
+        public CANComm(UInt16 deviceType, UInt16 deviceID, UInt16 channel, UInt16 accCode, UInt32 accMask, byte filter, byte mode, string baudRate, bool swapBitOrder=false)
         {
-            Setting = new CANSetting(deviceType, deviceID, channel, accCode, accMask, filter, mode, baudRate);
+            Setting = new CANSetting(deviceType, deviceID, channel, accCode, accMask, filter, mode, baudRate, swapBitOrder); ;
         }
 
         public void InitReceiveThread(bool StartThread, string Para = "")
@@ -419,18 +419,26 @@ namespace CAN
             return 0xFFFF;
         }
 
-        public static ulong GetBitsFromFrame(CAN_OBJ canOBJ, uint startBit, uint length)
+        public ulong GetBitsFromFrame(CAN_OBJ canOBJ, uint startBit, uint length)
         {
             byte[] byteData = new byte[canOBJ.DataLen];
-
             //get all data from frame
             canOBJ.data.CopyTo(byteData, 0);
 
 			return GetBitsFromFrame(byteData, startBit, length);
         }
 
-        public static ulong GetBitsFromFrame(byte[] byteArray, uint startBit, uint length)
+        public ulong GetBitsFromFrame(byte[] byteArray, uint startBit, uint length)
         {
+            byte[] byteData = new byte[byteArray.Length];
+            if (true == Setting.SwapBitOrder)
+            {
+                for (int i = 0; i < byteArray.Length; i++)
+                {
+                    byteData[i] = (byte)(((byteArray[i] * 0x80200802ul) & 0x0884422110ul) * 0x0101010101ul >> 32);
+                }
+            }
+
             //get useful byte[]
             uint uiUsefullenth = (uint)Math.Floor(((float)startBit+(float)length) / 8) + 1;
             
@@ -438,7 +446,7 @@ namespace CAN
             string strBinary = string.Empty;
             for (int i = 0; i < uiUsefullenth; i++)
             {
-                strBinary = string.Format("{0}{1}", strBinary, Convert.ToString(byteArray[i], 2).PadLeft(8, '0'));
+                strBinary = string.Format("{0}{1}", strBinary, Convert.ToString(byteData[i], 2).PadLeft(8, '0'));
             }
             string strValue = strBinary.Substring((int)startBit, (int)length);
             ulong ulValue = Convert.ToUInt64(strValue, 2);
@@ -521,8 +529,8 @@ namespace CAN
             return false;
         }
         #endregion
-    }
 
+    }
     public enum CANBaudRate:UInt16
     {
         BaudRate50 = 0,//  = 50;

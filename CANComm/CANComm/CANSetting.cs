@@ -26,7 +26,8 @@ namespace CAN
         public INIT_CONFIG InitCfg;
         public UInt16 MaxInterval { get; set; }
 
-        public CANSetting(UInt16 deviceType, UInt16 deviceID, UInt16 channel, UInt16 accCode, UInt32 accMask, byte filter, byte mode, string baudRate)
+        public bool SwapBitOrder { get; set; }
+        public CANSetting(UInt16 deviceType, UInt16 deviceID, UInt16 channel, UInt16 accCode, UInt32 accMask, byte filter, byte mode, string baudRate, bool swapBitOrder)
         {
             DeviceType = deviceType;
             DeviceID = deviceID;
@@ -35,6 +36,7 @@ namespace CAN
             AccMask = accMask;
             Filter = filter;
             Mode = mode;
+            SwapBitOrder = swapBitOrder;
             string pattern = @"\d+";
             Regex reg = new Regex(pattern);
             bool match = reg.IsMatch(baudRate);
@@ -203,6 +205,15 @@ namespace CAN
                 else
                 {
                     MaxInterval = 100;//unit in ms. default value
+                }
+                //bool SwapBitOrder
+                if (true == joCAN.ContainsKey("SwapBitOrder"))
+                {
+                    SwapBitOrder = (bool)joCAN["SwapBitOrder"];
+                }
+                else
+                {
+                    SwapBitOrder = false ;//default value
                 }
                 //UInt16 BaudRate
                 if (true == joCAN.ContainsKey("BaudRate"))

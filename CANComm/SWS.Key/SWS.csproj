@@ -41,8 +41,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="KeyIdentify.cs" />
     <Compile Include="PressAll.cs" />
-    <Compile Include="Press.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -62,4 +62,9 @@
     <None Include="testinputsample.json" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>Copy "$(SolutionDir)$(ProjectName)\*.dll" "$(SolutionDir)Debug\"
+Copy "$(ProjectDir)*.json" "$(SolutionDir)Debug\"
+Copy "$(ProjectDir)*.json" "$(SolutionDir)Bin\$(ConfigurationName)\"</PostBuildEvent>
+  </PropertyGroup>
 </Project>

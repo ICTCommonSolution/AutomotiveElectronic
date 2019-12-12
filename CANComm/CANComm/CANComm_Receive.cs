@@ -430,7 +430,7 @@ namespace CAN
         {
             DataList = new Dictionary<uint, List<byte[]>>();
             List<CAN_OBJ> canObjList = null;
-			try
+            try
         	{
         		FetchFrames(out canObjList, TimeOut);
 				if(canObjList.Count <= 0)
@@ -438,10 +438,10 @@ namespace CAN
 					return false;
 				}
 
-				foreach(CAN_OBJ canObj in canObjList)
-				{
-					//blank space between bytes
-					//string strData = string.Format("{0:X}", BitConverter.ToString(canObj.data).Replace("-", " "));
+                foreach (CAN_OBJ canObj in canObjList)
+                {
+                    //blank space between bytes
+                    //string strData = string.Format("{0:X}", BitConverter.ToString(canObj.data).Replace("-", " "));
                     if (DataList.ContainsKey(canObj.ID))
                     {
                         DataList[canObj.ID].Add(canObj.data);

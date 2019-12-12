@@ -83,6 +83,7 @@ namespace TestClass.SWS
             Key_BitsCheck("SET", 0x12B, 16, 1, 1, iWaitBeforeFetch, iTimeout);
 
             canTalk.EnablePeriodicMessageThread = false;
+            CloseDevice();
 
             //foreach (byte[] data in listData)
             //{
@@ -190,7 +191,7 @@ namespace TestClass.SWS
             {
                 foreach (byte[] data in listData)
                 {
-                    if (expectedValue == CANComm.GetBitsFromFrame(data, startBit, bitLength))
+                    if (expectedValue == canTalk.GetBitsFromFrame(data, startBit, bitLength))
                     {
                         status = true;
                         break;

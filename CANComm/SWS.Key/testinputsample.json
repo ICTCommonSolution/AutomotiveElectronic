@@ -1,11 +1,16 @@
 {
-  "SWS": {
+  "SWS.Key": {
     "Press": {
       "WaitAfterOpen": 500,
       "WaitBeforeFetch": 2000,
       "Timeout": 2500
     },
     "PressAll": {
+      "WaitAfterOpen": 500,
+      "WaitBeforeFetch": 2000,
+      "Timeout": 2500
+    },
+    "KeyIdentify": {
       "WaitAfterOpen": 500,
       "WaitBeforeFetch": 2000,
       "Timeout": 2500

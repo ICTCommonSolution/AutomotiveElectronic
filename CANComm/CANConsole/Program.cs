@@ -41,8 +41,8 @@ namespace CAN
 
                 //Thread.Sleep(10000);
 
-                PressAll keyall = new PressAll();
-                keyall.Do();
+                PressAll ki = new PressAll();
+                ki.Do();
 
                 Thread.Sleep(1000);
             }

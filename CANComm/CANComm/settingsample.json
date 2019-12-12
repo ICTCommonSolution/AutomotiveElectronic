@@ -9,6 +9,7 @@
     "Filter": 0,
     "Mode": 0,
     "BaudRate": "500",
-    "MaxInterval": 100
+    "MaxInterval": 100,
+    "SwapBitOrder":  true
   }
 }
