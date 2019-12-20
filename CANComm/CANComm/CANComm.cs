@@ -11,10 +11,14 @@ using Newtonsoft.Json.Linq;
 using System.Text.RegularExpressions;
 using System.Collections;
 using System.Reflection;
+using System.Globalization;
+using System.Resources;
+using Nile.CommonInstrument;
 
-namespace CAN
+
+namespace Nile.Instruments.CAN
 {
-    public partial class CANComm
+    public partial class CANComm : CommonInstruments
     {
         public int icount = 0;
         public bool Connected { get; private set; }
@@ -35,9 +39,48 @@ namespace CAN
     	{
             Setting = new CANSetting(settingFile);
         }
-        public CANComm(UInt16 deviceType, UInt16 deviceID, UInt16 channel, UInt16 accCode, UInt32 accMask, byte filter, byte mode, string baudRate, bool swapBitOrder=false)
+        public CANComm(UInt16 deviceType, UInt16 deviceID, UInt16 channel, UInt16 accCode, UInt32 accMask, byte filter, byte mode, string baudRate, bool swapBitOrder=false, bool swapByteOrder=false)
         {
-            Setting = new CANSetting(deviceType, deviceID, channel, accCode, accMask, filter, mode, baudRate, swapBitOrder); ;
+            Setting = new CANSetting(deviceType, deviceID, channel, accCode, accMask, filter, mode, baudRate, swapBitOrder, swapByteOrder); 
+        }
+
+        /// <summary>
+        /// Initial CANSetting by preloaded dictionary<string, List<object>>
+        /// </summary>
+        /// <param name="SettingFile">settings of program</param>
+        /// <param name="RootName">the root name in the file, it contains the expected module setting</param>
+        public CANComm(string SettingFile, string RootName)
+        {
+            try
+            {
+                if (true == File.Exists(SettingFile))
+                {
+                    Dictionary<string, List<object>> dictSetting = base.LoadSetting(this, SettingFile, RootName);
+                    if (dictSetting != null && dictSetting.Count > 0)
+                    {
+                        throw new Exception(string.Format("[{0}] - can't find setting of this module or setting count of this module is 0. {1}", this.GetType().Name, this.GetType().Name));
+                    }
+                    else
+                    {
+                        Setting = new CANSetting(dictSetting);
+                    }
+                }
+                else
+                {
+                    throw new Exception(string.Format("[{0}] - setting file does not exist", this.GetType().Name));
+                }
+            }
+            catch (Exception ex)
+            {
+                if (ex.Message.IndexOf(this.GetType().Name) == -1)
+                {
+                    throw ex;
+                }
+                else
+                {
+                    throw new Exception(string.Format("[{0}] - failed at open or parse setting file.{1}", this.GetType().Name, ex.Message));
+                }
+            }
         }
 
         public void InitReceiveThread(bool StartThread, string Para = "")
@@ -177,10 +220,18 @@ namespace CAN
             Console.WriteLine("[{0}] - [ThreadFunc_PeriodicFrame] - start", DateTime.Now.ToString("HH:mm:ss.ffff"));
             if (PeriodicCommands == null)
             {
-                Console.WriteLine("[{0}] - [ThreadFunc_PeriodicFrame] - command list is empty", DateTime.Now.ToString("HH:mm:ss.ffff"));
-                Assembly assm = Assembly.GetExecutingAssembly();
-                string strAlllines = (string)Resource.ResourceManager.GetObject("PeriodicSequence");
-                PeriodicCommands = LoadCommandList(strAlllines);
+                var assembly = Assembly.GetExecutingAssembly();
+                var resourceName = "PeriodicSequence.csv";
+
+                using (Stream stream = assembly.GetManifestResourceStream(resourceName))
+                using (StreamReader reader = new StreamReader(stream))
+                {
+                    PeriodicCommands = LoadCommandList(reader);
+                }
+                //Console.WriteLine("[{0}] - [ThreadFunc_PeriodicFrame] - command list is empty", DateTime.Now.ToString("HH:mm:ss.ffff"));
+                //Assembly assm = Assembly.GetExecutingAssembly();
+                //string strAlllines = (string)Resource.ResourceManager.GetObject("PeriodicSequence");
+                //PeriodicCommands = LoadCommandList(strAlllines);
             }
 
 			try
@@ -204,6 +255,32 @@ namespace CAN
 			{
 				//do nothing
 			}
+        }
+        /// <summary>
+        /// load simple commands from stream. Example of command line: 12b,1122334455667788 or: 12b,11 22 33 44 55 66 77 88
+        /// </summary>
+        /// <param name="commandFile">simple command list file</param>
+        /// <returns></returns>
+        public static List<string[]> LoadCommandList(StreamReader streamReader)
+        {
+            List<string[]> listCommand = new List<string[]>();
+
+            try
+            {
+                while (streamReader.Peek() >= 0)
+                {
+                    string[] strSplitted = streamReader.ReadLine().Split(',');
+                    string[] strPara = new string[2];
+                    strPara[0] = strSplitted[0].Trim();
+                    strPara[1] = strSplitted[1].Trim();
+                    listCommand.Add(strPara);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception(string.Format("Error in load simple command file with message: {0}", ex.Message));
+            }
+            return listCommand;
         }
 
         /// <summary>
@@ -494,7 +571,8 @@ namespace CAN
 
 		public bool ClearBuffer(bool ClearOnce)
 		{
-			if(true == ClearOnce)
+            ClearBuffer();
+			if(true == ClearOnce && listReceivedFrame != null)
 			{
                 try
                 {

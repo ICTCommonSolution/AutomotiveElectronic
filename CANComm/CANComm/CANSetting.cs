@@ -8,7 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
-namespace CAN
+namespace Nile.Instruments.CAN
 {
     public class CANSetting
     {
@@ -27,7 +27,8 @@ namespace CAN
         public UInt16 MaxInterval { get; set; }
 
         public bool SwapBitOrder { get; set; }
-        public CANSetting(UInt16 deviceType, UInt16 deviceID, UInt16 channel, UInt16 accCode, UInt32 accMask, byte filter, byte mode, string baudRate, bool swapBitOrder)
+        public bool SwapByteOrder { get; set; }
+        public CANSetting(UInt16 deviceType, UInt16 deviceID, UInt16 channel, UInt16 accCode, UInt32 accMask, byte filter, byte mode, string baudRate, bool swapBitOrder, bool swapByteOrder)
         {
             DeviceType = deviceType;
             DeviceID = deviceID;
@@ -37,6 +38,7 @@ namespace CAN
             Filter = filter;
             Mode = mode;
             SwapBitOrder = swapBitOrder;
+            SwapByteOrder = swapByteOrder;
             string pattern = @"\d+";
             Regex reg = new Regex(pattern);
             bool match = reg.IsMatch(baudRate);
@@ -98,6 +100,184 @@ namespace CAN
                     throw new Exception(string.Format("Wrong baud rate value {0} from setting", baudRate));
             }
         }
+        /// <summary>
+        /// Initial an instance from preloaded settings
+        /// </summary>
+        /// <param name="SettingList">Preloaded settings</param>
+        public CANSetting(Dictionary<string, List<object>> SettingDictionary)
+        {
+            if (true == SettingDictionary.ContainsKey("DeviceID"))
+            {
+                DeviceID = (UInt16)SettingDictionary["DeviceID"][0];
+            }
+            else
+            {
+                throw new Exception(string.Format("DeviceID is missing"));
+            }
+            //UInt16 AccCode
+            if (true == SettingDictionary.ContainsKey("AccCode"))
+            {
+                AccCode = (UInt16)SettingDictionary["AccCode"][0];
+            }
+            else
+            {
+                throw new Exception(string.Format("AccCode is missing"));
+            }
+            //long AccMask
+            if (true == SettingDictionary.ContainsKey("AccMask"))
+            {
+                AccMask = (UInt32)SettingDictionary["AccMask"][0];
+            }
+            else
+            {
+                throw new Exception(string.Format("AccMask is missing"));
+            }
+            //byte Filter
+            if (true == SettingDictionary.ContainsKey("Filter"))
+            {
+                Filter = (byte)SettingDictionary["Filter"][0];
+            }
+            else
+            {
+                throw new Exception(string.Format("Filter is missing"));
+            }
+            //UInt16 Mode
+            if (true == SettingDictionary.ContainsKey("Mode"))
+            {
+                Mode = (byte)SettingDictionary["Mode"][0];
+            }
+            else
+            {
+                throw new Exception(string.Format("Mode is missing"));
+            }
+            //int DeviceType
+            if (true == SettingDictionary.ContainsKey("DeviceType"))
+            {
+                DeviceType = (UInt16)SettingDictionary["DeviceType"][0];
+                /*string strDeviceType = (string)joCAN["DeviceType"];
+                if(true == strDeviceType.ToUpper().Equals("USBCAN I"))
+                {
+                    DeviceType = 3;
+                }
+               else if(strDeviceType.ToUpper().Equals("USBCAN II"))
+               {
+                   DeviceType = 4;
+               }
+               else
+               {
+                    throw new Exception(string.Format("Unsupported device: {0}", strDeviceType));
+               }*/
+            }
+            else
+            {
+                throw new Exception(string.Format("DeviceType is missing"));
+            }
+            //UInt16 Channel
+            if (true == SettingDictionary.ContainsKey("Channel"))
+            {
+                Channel = (UInt16)SettingDictionary["Channel"][0];
+            }
+            else
+            {
+                throw new Exception(string.Format("Channel is missing"));
+            }
+            //UInt16 MaxInterval
+            if (true == SettingDictionary.ContainsKey("MaxInterval"))
+            {
+                MaxInterval = (UInt16)SettingDictionary["MaxInterval"][0];
+            }
+            else
+            {
+                MaxInterval = 100;//unit in ms. default value
+            }
+            //bool SwapBitOrder
+            if (true == SettingDictionary.ContainsKey("SwapBitOrder"))
+            {
+                SwapBitOrder = (bool)SettingDictionary["SwapBitOrder"][0];
+            }
+            else
+            {
+                SwapBitOrder = false;//default value
+            }
+            //bool SwapByteOrder
+            if (true == SettingDictionary.ContainsKey("SwapByteOrder"))
+            {
+                SwapByteOrder = (bool)SettingDictionary["SwapByteOrder"][0];
+            }
+            else
+            {
+                SwapByteOrder = false;//default value
+            }
+            //UInt16 BaudRate
+            if (true == SettingDictionary.ContainsKey("BaudRate"))
+            {
+                string strBaudRate = (string)SettingDictionary["BaudRate"][0];
+                string pattern = @"\d+";
+                Regex reg = new Regex(pattern);
+                bool match = reg.IsMatch(strBaudRate);
+                int BaudRate = -1;
+                if (true == match)
+                {
+                    MatchCollection mc = reg.Matches(strBaudRate);
+                    if (int.TryParse(mc[0].Value, out BaudRate))
+                    {
+                    }
+                }
+                switch (BaudRate)
+                {
+                    case 1000:
+                        Timing0 = 0;
+                        Timing1 = 0x14;
+                        break;
+                    case 800:
+                        Timing0 = 0;
+                        Timing1 = 0x16;
+                        break;
+                    case 666:
+                        Timing0 = 0x80;
+                        Timing1 = 0xb6;
+                        break;
+                    case 500:
+                        Timing0 = 0;
+                        Timing1 = 0x1c;
+                        break;
+                    case 400:
+                        Timing0 = 0x80;
+                        Timing1 = 0xfa;
+                        break;
+                    case 250:
+                        Timing0 = 0x01;
+                        Timing1 = 0x1c;
+                        break;
+                    case 200:
+                        Timing0 = 0x81;
+                        Timing1 = 0xfa;
+                        break;
+                    case 125:
+                        Timing0 = 0x03;
+                        Timing1 = 0x1c;
+                        break;
+                    case 100:
+                        Timing0 = 0x04;
+                        Timing1 = 0x1c;
+                        break;
+                    case 80:
+                        Timing0 = 0x83;
+                        Timing1 = 0xff;
+                        break;
+                    case 50:
+                        Timing0 = 0x09;
+                        Timing1 = 0x1c;
+                        break;
+                    default:
+                        throw new Exception(string.Format("Wrong baud rate value {0} from setting", strBaudRate));
+                }
+            }
+            else
+            {
+                throw new Exception(string.Format("BaudRate is missing"));
+            }
+        }
         public CANSetting(string file) 
         {
             if(false == File.Exists(file))
@@ -109,6 +289,7 @@ namespace CAN
 	#region Load setting for CAN communication from json file
 		private void LoadSetting(string fileName)
 		{
+
             StreamReader file;
             JsonTextReader reader;
 			string strBaudRate = string.Empty;
@@ -214,6 +395,15 @@ namespace CAN
                 else
                 {
                     SwapBitOrder = false ;//default value
+                }
+                //bool SwapByteOrder
+                if (true == joCAN.ContainsKey("SwapByteOrder"))
+                {
+                    SwapByteOrder = (bool)joCAN["SwapByteOrder"];
+                }
+                else
+                {
+                    SwapByteOrder = false;//default value
                 }
                 //UInt16 BaudRate
                 if (true == joCAN.ContainsKey("BaudRate"))

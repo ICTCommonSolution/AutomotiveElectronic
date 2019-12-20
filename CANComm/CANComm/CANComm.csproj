@@ -71,6 +71,16 @@
       <LastGenOutput>Resource.Designer.cs</LastGenOutput>
     </EmbeddedResource>
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\Nile\CommonInstrument\CommonInstrument\CommonInstrument.csproj">
+      <Project>{49180aea-c82a-473a-b5d1-0846c79f2b93}</Project>
+      <Name>CommonInstrument</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Nile\Nile.Definition\Nile.Definition\Nile.Definition.csproj">
+      <Project>{840fb11f-ec93-4367-aeaa-8a900e92b050}</Project>
+      <Name>Nile.Definition</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>Copy "$(SolutionDir)$(ProjectName)\*.dll" "$(SolutionDir)Debug\"

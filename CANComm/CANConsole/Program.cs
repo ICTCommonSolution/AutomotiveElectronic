@@ -5,9 +5,12 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Threading;
 using System.IO;
-using CAN;
+using Nile.CommonInstrument;
+using Nile.Instruments.CAN;
 using TestClass;
 using TestClass.SWS;
+using Nile.Log;
+using Nile.Definitions;
 
 namespace CAN
 {
@@ -41,7 +44,12 @@ namespace CAN
 
                 //Thread.Sleep(10000);
 
+                NileLogger logger = new NileLogger(string.Format("{0}.txt", DateTime.Now.ToString("yyyy-MM-dd_HH:mm:ss")));
+
                 PressAll ki = new PressAll();
+                //classAA.AA_Myevent += new ClassAA.A_DelegateEventHander(classBB.change);
+                ki.eventSent2Log += new PressAll.Send2LogEventHanler(logger.OnReceiveLogInfo);
+
                 ki.Do();
 
                 Thread.Sleep(1000);
@@ -70,40 +78,6 @@ namespace CAN
                                 command["FrameType"],
                                 command["DataLen"],
                                 command["CommandOrg"]);
-        }
-
-        private static string CommandInfo(CAN_OBJ canObj)
-        {
-            return string.Format("FrameInfo:,ID={0},Data={1}",canObj.ID, BitConverter.ToString(canObj.data).Replace("-", string.Empty));
-        }
-
-        /// <summary>
-        /// load simple commands file. Example of command line: 12b,1122334455667788
-        /// </summary>
-        /// <param name="commandFile">simple command list file</param>
-        /// <returns></returns>
-        private static List<string[]> LoadSimpleCommandFileToCanList(string commandFile)
-        {
-            string[] lines = null;
-            List<string[]> listCommand = new List<string[]>();
-
-            try
-            {
-                lines = File.ReadAllLines(commandFile);
-                foreach (string line in lines)
-                {
-                    string[] strSplitted = line.Split(',');
-                    string[] strPara = new string[2];
-                    strPara[0] = strSplitted[0].Trim();
-                    strPara[1] = strSplitted[1].Trim();
-                    listCommand.Add(strPara);
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception(string.Format("Error in load simple command file with message: {0}", ex.Message));
-            }
-            return listCommand;
         }
 
         public static byte[] StringToByteArray(string hex)

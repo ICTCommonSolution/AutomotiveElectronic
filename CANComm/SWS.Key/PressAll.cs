@@ -4,7 +4,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Nile;
-using CAN;
+using Nile.Instruments.CAN;
+using Nile.Instruments;
 using System.Threading;
 using System.Reflection;
 
@@ -231,8 +232,14 @@ namespace TestClass.SWS
 
         private void CloseDevice()
         {
-            Console.WriteLine("[{0}] - [{2}.Do] - ReceivedThread state = {1}", DateTime.Now.ToString("HH:mm:ss.ffff"), canTalk.ReceiveThread.ThreadState, this.ToString());
-            Console.WriteLine("[{0}] - [{2}.Do] - PeriodicThread state = {1}", DateTime.Now.ToString("HH:mm:ss.ffff"), canTalk.PeriodicMessageThread.ThreadState, this.ToString());
+            if (canTalk.ReceiveThread != null)
+            {
+                Console.WriteLine("[{0}] - [{2}.Do] - ReceivedThread state = {1}", DateTime.Now.ToString("HH:mm:ss.ffff"), canTalk.ReceiveThread.ThreadState, this.ToString());
+            }
+            if (canTalk.PeriodicMessageThread != null)
+            {
+                Console.WriteLine("[{0}] - [{2}.Do] - PeriodicThread state = {1}", DateTime.Now.ToString("HH:mm:ss.ffff"), canTalk.PeriodicMessageThread.ThreadState, this.ToString());
+            }
             canTalk.ClearBuffer(true);
         }
 

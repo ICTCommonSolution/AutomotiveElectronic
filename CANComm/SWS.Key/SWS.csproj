@@ -31,6 +31,18 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="OpenCvSharp, Version=1.0.0.0, Culture=neutral, PublicKeyToken=6adad1e807fea099, processorArchitecture=MSIL">
+      <HintPath>..\packages\OpenCvSharp4.4.1.1.20191110\lib\net461\OpenCvSharp.dll</HintPath>
+    </Reference>
+    <Reference Include="OpenCvSharp.Blob, Version=1.0.0.0, Culture=neutral, PublicKeyToken=6adad1e807fea099, processorArchitecture=MSIL">
+      <HintPath>..\packages\OpenCvSharp4.4.1.1.20191110\lib\net461\OpenCvSharp.Blob.dll</HintPath>
+    </Reference>
+    <Reference Include="OpenCvSharp.Extensions, Version=1.0.0.0, Culture=neutral, PublicKeyToken=6adad1e807fea099, processorArchitecture=MSIL">
+      <HintPath>..\packages\OpenCvSharp4.4.1.1.20191110\lib\net461\OpenCvSharp.Extensions.dll</HintPath>
+    </Reference>
+    <Reference Include="OpenCvSharp.UserInterface, Version=1.0.0.0, Culture=neutral, PublicKeyToken=6adad1e807fea099, processorArchitecture=MSIL">
+      <HintPath>..\packages\OpenCvSharp4.4.1.1.20191110\lib\net461\OpenCvSharp.UserInterface.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -41,6 +53,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="OpenCVTest.cs" />
     <Compile Include="KeyIdentify.cs" />
     <Compile Include="PressAll.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
@@ -49,6 +62,14 @@
     <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Nile\CommonInstrument\CommonInstrument\CommonInstrument.csproj">
+      <Project>{49180aea-c82a-473a-b5d1-0846c79f2b93}</Project>
+      <Name>CommonInstrument</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Nile\Nile.Definition\Nile.Definition\Nile.Definition.csproj">
+      <Project>{840fb11f-ec93-4367-aeaa-8a900e92b050}</Project>
+      <Name>Nile.Definition</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\..\Nile\TestClassBase\TestClassBase\TestClassBase\TestClassBase.csproj">
       <Project>{feccfc73-d160-47aa-8a39-59cd1cc9261b}</Project>
       <Name>TestClassBase</Name>
@@ -59,6 +80,7 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
+    <None Include="packages.config" />
     <None Include="testinputsample.json" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

@@ -53,6 +53,18 @@
     <None Include="commandlist.csv" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\..\Nile\CommonInstrument\CommonInstrument\CommonInstrument.csproj">
+      <Project>{49180aea-c82a-473a-b5d1-0846c79f2b93}</Project>
+      <Name>CommonInstrument</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Nile\Nile.Definition\Nile.Definition\Nile.Definition.csproj">
+      <Project>{840fb11f-ec93-4367-aeaa-8a900e92b050}</Project>
+      <Name>Nile.Definition</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\..\Nile\Nile.Log\Nile.Log.csproj">
+      <Project>{3f0db90c-cca4-49c8-b7ed-cf8c68d65093}</Project>
+      <Name>Nile.Log</Name>
+    </ProjectReference>
     <ProjectReference Include="..\..\..\Nile\TestClassBase\TestClassBase\TestClassBase\TestClassBase.csproj">
       <Project>{feccfc73-d160-47aa-8a39-59cd1cc9261b}</Project>
       <Name>TestClassBase</Name>

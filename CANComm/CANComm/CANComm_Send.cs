@@ -12,7 +12,7 @@ using System.Text.RegularExpressions;
 using System.Collections;
 using System.Reflection;
 
-namespace CAN
+namespace Nile.Instruments.CAN
 {
     public partial class CANComm
     {
