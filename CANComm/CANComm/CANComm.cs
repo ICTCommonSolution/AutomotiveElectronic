@@ -41,7 +41,7 @@ namespace Nile.Instruments.CAN
         }
         public CANComm(UInt16 deviceType, UInt16 deviceID, UInt16 channel, UInt16 accCode, UInt32 accMask, byte filter, byte mode, string baudRate, bool swapBitOrder=false, bool swapByteOrder=false)
         {
-            Setting = new CANSetting(deviceType, deviceID, channel, accCode, accMask, filter, mode, baudRate, swapBitOrder, swapByteOrder); 
+            Setting = new CANSetting(deviceType, deviceID, channel, accCode, accMask, filter, mode, baudRate, swapBitOrder, swapByteOrder);
         }
 
         /// <summary>
@@ -218,20 +218,18 @@ namespace Nile.Instruments.CAN
         {
             string str = obj as string;
             Console.WriteLine("[{0}] - [ThreadFunc_PeriodicFrame] - start", DateTime.Now.ToString("HH:mm:ss.ffff"));
-            if (PeriodicCommands == null)
+            try
             {
-                var assembly = Assembly.GetExecutingAssembly();
-                var resourceName = "PeriodicSequence.csv";
-
-                using (Stream stream = assembly.GetManifestResourceStream(resourceName))
-                using (StreamReader reader = new StreamReader(stream))
+                if (PeriodicCommands == null || PeriodicCommands.Count < 1)
                 {
-                    PeriodicCommands = LoadCommandList(reader);
+                    string strPath = new FileInfo(Assembly.GetExecutingAssembly().Location).DirectoryName + "\\" + "PeriodicSequence.csv";
+                    StreamReader sr = new StreamReader(new FileStream(strPath, FileMode.Open, FileAccess.Read));
+                    PeriodicCommands = LoadCommandList(sr.ReadToEnd());
                 }
-                //Console.WriteLine("[{0}] - [ThreadFunc_PeriodicFrame] - command list is empty", DateTime.Now.ToString("HH:mm:ss.ffff"));
-                //Assembly assm = Assembly.GetExecutingAssembly();
-                //string strAlllines = (string)Resource.ResourceManager.GetObject("PeriodicSequence");
-                //PeriodicCommands = LoadCommandList(strAlllines);
+            }
+            catch
+            {
+                throw new Exception(string.Format("[{0}][ThreadFunc_PeriodicFrame]: failed to load periodic sequence from file or convert to command list", this.GetType().Name));
             }
 
 			try

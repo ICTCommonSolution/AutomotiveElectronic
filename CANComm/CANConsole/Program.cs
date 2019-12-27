@@ -11,6 +11,7 @@ using TestClass;
 using TestClass.SWS;
 using Nile.Log;
 using Nile.Definitions;
+using System.Reflection;
 
 namespace CAN
 {
@@ -44,7 +45,9 @@ namespace CAN
 
                 //Thread.Sleep(10000);
 
-                NileLogger logger = new NileLogger(string.Format("{0}.txt", DateTime.Now.ToString("yyyy-MM-dd_HH:mm:ss")));
+                FileInfo fi = new FileInfo( Assembly.GetExecutingAssembly().Location);
+                string strPath = fi.DirectoryName + "\\";
+                NileLogger logger = new NileLogger(string.Format("{1}{0}.txt", DateTime.Now.ToString("yyyy-MM-dd_HHmmss"), strPath));
 
                 PressAll ki = new PressAll();
                 //classAA.AA_Myevent += new ClassAA.A_DelegateEventHander(classBB.change);

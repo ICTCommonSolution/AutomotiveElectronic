@@ -22,14 +22,14 @@ namespace CAN {
     [global::System.CodeDom.Compiler.GeneratedCodeAttribute("System.Resources.Tools.StronglyTypedResourceBuilder", "16.0.0.0")]
     [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
     [global::System.Runtime.CompilerServices.CompilerGeneratedAttribute()]
-    internal class Resource {
+    internal class Items {
         
         private static global::System.Resources.ResourceManager resourceMan;
         
         private static global::System.Globalization.CultureInfo resourceCulture;
         
         [global::System.Diagnostics.CodeAnalysis.SuppressMessageAttribute("Microsoft.Performance", "CA1811:AvoidUncalledPrivateCode")]
-        internal Resource() {
+        internal Items() {
         }
         
         /// <summary>
@@ -39,7 +39,7 @@ namespace CAN {
         internal static global::System.Resources.ResourceManager ResourceManager {
             get {
                 if (object.ReferenceEquals(resourceMan, null)) {
-                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("CAN.Resource", typeof(Resource).Assembly);
+                    global::System.Resources.ResourceManager temp = new global::System.Resources.ResourceManager("CAN.Items", typeof(Items).Assembly);
                     resourceMan = temp;
                 }
                 return resourceMan;
@@ -61,17 +61,21 @@ namespace CAN {
         }
         
         /// <summary>
-        ///   查找类似 336,FE 00
-        ///2A7       ,00 00 00 00 00 00 00 40
-        ///5F0       ,FF 00 00 00 00 00 00 00
-        ///12DD54D6 ,00 10 00 00 00 00 00 00
-        ///1B000010,00 00 00 00 00 00 00 00
-        ///26B,00 00 80 00 00 00 00 00
-        ///3DC       ,00 80 00 00 00 00 00 00
-        ///2A8       ,80 00 00 00 00 00 00 00
-        ///12DD54FF,00 00 00 00 00 00 00 00
-        ///3C0,00 00 02 00  
-        ///17FC1631,03 00 的本地化字符串。
+        ///   查找类似 2A7      ,00 00 00 00 00 00 00 40 
+        ///5F0      ,CC 00 14 00 00 00 00 00 
+        ///3DC      ,00 80 00 00 00 00 00 00 
+        ///2A8      ,80 00 00 00 00 00 00 00 
+        ///2A7      ,00 00 00 00 00 00 00 40 
+        ///3DC      ,00 80 00 00 00 00 00 00 
+        ///3C0      ,CF 01 02 00 
+        ///12DD54D6,00 10 00 00 00 00 00 00 
+        ///26B      ,99 01 80 00 00 00 00 00 
+        ///2A8      ,80 00 00 00 00 00 00 00 
+        ///2A7      ,00 00 00 00 00 00 00 40 
+        ///3DC      ,00 80 00 00 00 00 00 00 
+        ///2A8      ,80 00 00 00 00 00 00 00 
+        ///2A7      ,00 00 00 00 00 00 00 40 
+        ///3DC      ,00 80 00 00 [字符串的其余部分被截断]&quot;; 的本地化字符串。
         /// </summary>
         internal static string PeriodicSequence {
             get {

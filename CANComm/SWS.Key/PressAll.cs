@@ -137,20 +137,23 @@ namespace TestClass.SWS
 
             if (listResponse == null || listResponse.Count <= 0)
             {
-                return false;                
+                bStatus = false;
             }
-            foreach (string strExpected in expectedData)
+            else
             {
-                foreach (string strResponse in listResponse)
+                foreach (string strExpected in expectedData)
                 {
-                    if (strResponse.IndexOf(strExpected) >= 0)
+                    foreach (string strResponse in listResponse)
                     {
-                        bStatus = true;
-                        break;
+                        if (strResponse.IndexOf(strExpected) >= 0)
+                        {
+                            bStatus = true;
+                            break;
+                        }
                     }
+                    if (bStatus)
+                        break;
                 }
-                if(bStatus)
-                    break;
             }
 
             if (true == bStatus)
