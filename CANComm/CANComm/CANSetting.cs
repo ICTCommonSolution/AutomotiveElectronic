@@ -108,7 +108,7 @@ namespace Nile.Instruments.CAN
         {
             if (true == SettingDictionary.ContainsKey("DeviceID"))
             {
-                DeviceID = (UInt16)SettingDictionary["DeviceID"][0];
+                DeviceID = Convert.ToUInt16(SettingDictionary["DeviceID"][0]);
             }
             else
             {
@@ -117,7 +117,7 @@ namespace Nile.Instruments.CAN
             //UInt16 AccCode
             if (true == SettingDictionary.ContainsKey("AccCode"))
             {
-                AccCode = (UInt16)SettingDictionary["AccCode"][0];
+                AccCode = Convert.ToUInt16(SettingDictionary["AccCode"][0]);
             }
             else
             {
@@ -126,7 +126,7 @@ namespace Nile.Instruments.CAN
             //long AccMask
             if (true == SettingDictionary.ContainsKey("AccMask"))
             {
-                AccMask = (UInt32)SettingDictionary["AccMask"][0];
+                AccMask = Convert.ToUInt32(SettingDictionary["AccMask"][0]);
             }
             else
             {
@@ -135,7 +135,7 @@ namespace Nile.Instruments.CAN
             //byte Filter
             if (true == SettingDictionary.ContainsKey("Filter"))
             {
-                Filter = (byte)SettingDictionary["Filter"][0];
+                Filter = (byte)Convert.ToChar(SettingDictionary["Filter"][0]);
             }
             else
             {
@@ -144,7 +144,7 @@ namespace Nile.Instruments.CAN
             //UInt16 Mode
             if (true == SettingDictionary.ContainsKey("Mode"))
             {
-                Mode = (byte)SettingDictionary["Mode"][0];
+                Mode = (byte)Convert.ToChar(SettingDictionary["Mode"][0]);
             }
             else
             {
@@ -153,7 +153,7 @@ namespace Nile.Instruments.CAN
             //int DeviceType
             if (true == SettingDictionary.ContainsKey("DeviceType"))
             {
-                DeviceType = (UInt16)SettingDictionary["DeviceType"][0];
+                DeviceType = Convert.ToUInt16(SettingDictionary["DeviceType"][0]);
                 /*string strDeviceType = (string)joCAN["DeviceType"];
                 if(true == strDeviceType.ToUpper().Equals("USBCAN I"))
                 {
@@ -175,7 +175,7 @@ namespace Nile.Instruments.CAN
             //UInt16 Channel
             if (true == SettingDictionary.ContainsKey("Channel"))
             {
-                Channel = (UInt16)SettingDictionary["Channel"][0];
+                Channel = Convert.ToUInt16(SettingDictionary["Channel"][0]);
             }
             else
             {
@@ -184,7 +184,7 @@ namespace Nile.Instruments.CAN
             //UInt16 MaxInterval
             if (true == SettingDictionary.ContainsKey("MaxInterval"))
             {
-                MaxInterval = (UInt16)SettingDictionary["MaxInterval"][0];
+                MaxInterval = Convert.ToUInt16(SettingDictionary["MaxInterval"][0]);
             }
             else
             {
@@ -193,7 +193,7 @@ namespace Nile.Instruments.CAN
             //bool SwapBitOrder
             if (true == SettingDictionary.ContainsKey("SwapBitOrder"))
             {
-                SwapBitOrder = (bool)SettingDictionary["SwapBitOrder"][0];
+                SwapBitOrder = Convert.ToBoolean(SettingDictionary["SwapBitOrder"][0]);
             }
             else
             {
@@ -202,7 +202,7 @@ namespace Nile.Instruments.CAN
             //bool SwapByteOrder
             if (true == SettingDictionary.ContainsKey("SwapByteOrder"))
             {
-                SwapByteOrder = (bool)SettingDictionary["SwapByteOrder"][0];
+                SwapByteOrder = Convert.ToBoolean(SettingDictionary["SwapByteOrder"][0]);
             }
             else
             {
@@ -211,8 +211,7 @@ namespace Nile.Instruments.CAN
             //UInt16 BaudRate
             if (true == SettingDictionary.ContainsKey("BaudRate"))
             {
-                string strBaudRate = (string)SettingDictionary["BaudRate"][0];
-                string pattern = @"\d+";
+                string strBaudRate = Convert.ToString(SettingDictionary["BaudRate"][0]); string pattern = @"\d+";
                 Regex reg = new Regex(pattern);
                 bool match = reg.IsMatch(strBaudRate);
                 int BaudRate = -1;

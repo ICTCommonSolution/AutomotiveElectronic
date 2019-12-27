@@ -56,7 +56,7 @@ namespace Nile.Instruments.CAN
                 if (true == File.Exists(SettingFile))
                 {
                     Dictionary<string, List<object>> dictSetting = base.LoadSetting(this, SettingFile, RootName);
-                    if (dictSetting != null && dictSetting.Count > 0)
+                    if (dictSetting != null && dictSetting.Count == 0)
                     {
                         throw new Exception(string.Format("[{0}] - can't find setting of this module or setting count of this module is 0. {1}", this.GetType().Name, this.GetType().Name));
                     }
